@@ -1,0 +1,11 @@
+[package]
+name = "xn-main-meta"
+version = "0.0.0"
+authors = ["Imad Bouziani <imad@bictory.io>"]
+edition = "2018"
+publish = false
+[dependencies.xn-main]
+path = ".."
+
+[dependencies.multiversx-sc-meta]
+version = "0.39.5"

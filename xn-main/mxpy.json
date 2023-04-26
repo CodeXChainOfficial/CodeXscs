@@ -8,16 +8,12 @@
     "contract": {
         "deploy": {
             "verbose": true,
-            "bytecode": "output/ping-pong.wasm",
+            "bytecode": "output/xn-main.wasm",
             "recall-nonce": true,
             "pem": "~/multiversx/wallets/wallet-owner.pem",
             "gas-limit": 60000000,
-            "arguments": [
-                1000000000000000000,
-                600
-            ],
             "send": true,
-            "outfile": "deploy-testnet.interaction.json"
+            "outfile": "deploy-devnet.interaction.json"
         }
     }
 }

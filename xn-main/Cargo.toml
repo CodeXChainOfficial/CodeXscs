@@ -1,0 +1,14 @@
+[package]
+name = "xn-main"
+version = "0.0.1"
+authors = ["Imad Bouziani <imad@bictory.io>"]
+edition = "2018"
+publish = false
+
+[lib]
+path = "src/xn_main.rs"
+[dependencies.multiversx-sc]
+version = "0.39.5"
+
+[dev-dependencies.multiversx-sc-scenario]
+version = "0.39.5"
