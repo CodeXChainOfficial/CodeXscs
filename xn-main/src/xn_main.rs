@@ -6,7 +6,7 @@ multiversx_sc::derive_imports!();
 const GRACE_PERIOD: u64 = 21 * 24 * 60 * 60; // 21 days
 const YEAR_IN_SECONDS: u64 = 365 * 24 * 60 * 60; // 1 year (365 days)
 const MIN_LENGTH: usize = 3;
-pub const MAX_LENGTH: usize = 256;
+const MAX_LENGTH: usize = 256;
 
 // objects
 #[derive(
@@ -20,7 +20,7 @@ pub struct DomainName<M: ManagedTypeApi> {
 #[derive(
     ManagedVecItem, NestedEncode, NestedDecode, TopEncode, TopDecode, Clone, TypeAbi, Default,
 )]
-pub struct ConsentRequest<M: ManagedTypeApi> {
+pub struct AcceptRequest<M: ManagedTypeApi> {
     pub domain_name: DomainName<M>,
     pub until: u64,
 }
@@ -55,8 +55,9 @@ pub trait XnMain {
         domain_name: ManagedBuffer,
         years: u8,
         assign_to: OptionalValue<ManagedAddress>,
-    ) -> DomainName<Self::Api> {
-        let payment = self.call_value().egld_value();
+    ) {
+        let (token, _, payment) = self.call_value().egld_or_single_esdt().into_tuple();
+
         let caller = self.blockchain().get_caller();
 
         require!(years > 0, "Duration (years) must be a positive integer");
@@ -66,47 +67,43 @@ pub trait XnMain {
             "name is not available for caller"
         );
 
-        // TODO: price for domain
         let price = self.rent_price(&domain_name, &years);
-        // let price = self.get_price(domain_name.len()).get() * BigUint::from(years);
         require!(price <= payment, "Insufficient EGLD Funds");
 
-        match assign_to {
-            OptionalValue::Some(address) => {
-                if address == caller {
-                    self.resolve_domain_name(&domain_name).set(address.clone())
-                } else {
-                    self.consent_request(&address).set(domain_name.clone())
-                }
-            }
-            OptionalValue::None => {
-                self.del(&domain_name);
-            }
+        let mut since = self.get_current_time();
+
+        let domain_record_exists = !self.domain_name(&domain_name).is_empty();
+
+        if domain_record_exists {
+            since = self.domain_name(&domain_name).get().expires_at;
         }
 
-        // TODO: NFTs
-        // if exist alredy, burn
-        // mint NFT
-
-        // if price < payment {
-        // TODO: return extra EGLD if customer sent more than required
-        // return payment - price
-        // }
-
-        // TODO: if exist before, increment expires at
-        let new_domain = DomainName {
+        let new_domain_record = DomainName {
             name: domain_name.clone(),
-            expires_at: self.get_current_time() + (u64::from(years) * YEAR_IN_SECONDS),
+            expires_at: since + (u64::from(years) * YEAR_IN_SECONDS),
         };
 
-        self.domain_name(&domain_name).set(new_domain.clone());
+        self.domain_name(&domain_name)
+            .set(new_domain_record.clone());
+        self._update_primary_address(&domain_name, assign_to);
 
-        new_domain
+        // TODO: NFTs
+        // if exist alredy, burn for old owner
+        // mint NFT for new owner
+
+
+        // return extra EGLD if customer sent more than required
+        if price < payment {
+            let excess = payment - price;
+            self.send().direct(&caller, &token, 0, &excess);
+        }
     }
 
     fn is_name_valid(&self, domain_name: &ManagedBuffer) -> bool {
         // require!(domain_name.len() <= MAX_LENGTH, "name too long");
         require!(domain_name.len() >= MIN_LENGTH, "name too short");
+
+        // ends with a whitelisted TLD
 
         // TODO: validate the types of characters
         // punycode? https://chromium.googlesource.com/chromium/src/+/main/docs/idn.md
@@ -132,80 +129,121 @@ pub trait XnMain {
         price * 10_000_000_000_000_000
     }
 
-    fn can_claim(&self, address: &ManagedAddress, domain_name: &ManagedBuffer) -> bool {
-        // let domain = self.domain_name(domain_name).get();
-
-        // // has NFT
-
-        // // is reserved for him
-        // if self.owner_domain_name(&address).get() == domain_name.clone() {
-        //     return true;
-        // }
-
-        // // Is out of grace period or not found
-        // if self.domain_name(&domain_name).is_empty()
-        //     || self.domain_name(&domain_name).get().expires_at + GRACE_PERIOD
-        //         < self.get_current_time()
-        // {
-        //     return true;
-        // }
-
-        // false
-        true
-    }
-
     fn get_current_time(&self) -> u64 {
         self.blockchain().get_block_timestamp()
     }
 
-    #[endpoint]
-    fn update(&self, domain_name: ManagedBuffer, assignTo: ManagedAddress) {
-        let caller = self.blockchain().get_caller();
+    fn can_claim(&self, address: &ManagedAddress, domain_name: &ManagedBuffer) -> bool {
+            // Is not found
+            self.domain_name(&domain_name).is_empty() 
+            // Is out of grace period or not found
+            || (self.domain_name(&domain_name).get().expires_at + GRACE_PERIOD < self.get_current_time())
+            // if is owner
+            || self.is_owner(&address, &domain_name)
+    }
+
+    fn is_owner(&self, address: &ManagedAddress, domain_name: &ManagedBuffer) -> bool {
+        // has NFT
+        // NFT is the key to ownership
+
+        // is reserved for him
+        if self.owner_domain_name(&address).get() == domain_name.clone() {
+            return true;
+        }
+
+        require!(false, "Not Permitted! only owner can call this method");
+        false
     }
 
     #[endpoint]
-    fn delete(&self, domain_name: ManagedBuffer, assignTo: ManagedAddress) {
+    fn is_empty(
+        &self,
+        domain_name: ManagedBuffer
+    ) -> DomainName<Self::Api> {
+        if(self.domain_name(&domain_name).is_empty()) {
+            return self.domain_name(&domain_name).get();
+        }
+        else {
+            require!(false, "not empty");
+            return self.domain_name(&domain_name).get();
+        }
+        
+    }
+    #[endpoint]
+    fn update_primary_address(
+        &self,
+        domain_name: ManagedBuffer,
+        assign_to: OptionalValue<ManagedAddress>,
+    ) {
         let caller = self.blockchain().get_caller();
+
+        self.is_owner(&caller, &domain_name);
+
+        self._update_primary_address(&domain_name, assign_to)
     }
 
-    fn del(&self, domain_name: &ManagedBuffer) {
+    fn _update_primary_address(
+        &self,
+        domain_name: &ManagedBuffer,
+        assign_to: OptionalValue<ManagedAddress>,
+    ) {
         let caller = self.blockchain().get_caller();
 
-        self.resolve_domain_name(&domain_name).clear();
+        match assign_to {
+            OptionalValue::Some(address) => {
+                if address == caller {
+                    self.resolve_domain_name(&domain_name).set(address)
+                } else {
+                    self.accept_request(&domain_name).set(address)
+                }
+            }
+            OptionalValue::None => {
+                self.resolve_domain_name(&domain_name).clear();
+            }
+        }
     }
 
     #[endpoint]
-    fn consent(&self, domain_name: ManagedBuffer) {
+    fn update_key_value(
+        &self,
+        domain_name: ManagedBuffer,
+        key: ManagedBuffer,
+        value: OptionalValue<ManagedBuffer>,
+    ) {
         let caller = self.blockchain().get_caller();
-        // caller has to have a consentRequest matching the domain_name
+        self.is_owner(&caller, &domain_name);
+
+        match value {
+            OptionalValue::Some(_value) => {
+                self.resolve_domain_name_key(&domain_name, &key).set(_value)
+            }
+            OptionalValue::None => {
+                self.resolve_domain_name_key(&domain_name, &key).clear();
+            }
+        }
     }
 
     #[endpoint]
-    fn ping(&self, name: ManagedBuffer) -> ManagedAddress<Self::Api> {
+    fn accept(&self, domain_name: ManagedBuffer) {
         let caller = self.blockchain().get_caller();
-        // caller has to have a consentRequest matching the domain_name
-        let key = ManagedBuffer::from("imadd");
 
-        // self.get_ping(&key).set(name);
+        // caller has to have a acceptRequest matching the domain_name
+        require!(
+            self.accept_request(&domain_name).get() == caller.clone(),
+            "Caller doesn't have acceptRequest for requested domain name"
+        );
 
-        let dn = DomainName {
-            name: name,
-            expires_at: 0,
-        };
-
-        self.get_ping(&key).set(dn);
-
-        caller
+        self.resolve_domain_name(&domain_name).set(caller);
+        self.accept_request(&domain_name).clear();
     }
 
-    #[view(get_ping)]
-    #[storage_mapper("ping")]
-    fn get_ping(&self, name: &ManagedBuffer) -> SingleValueMapper<DomainName<Self::Api>>;
-
     #[endpoint]
-    fn revokeConsentRequest(&self, domain_name: ManagedBuffer) {
+    fn revokeAcceptRequest(&self, domain_name: ManagedBuffer) {
         let caller = self.blockchain().get_caller();
-        // caller has to be owner
+
+        self.is_owner(&caller, &domain_name);
+
+        self.accept_request(&domain_name).clear();
     }
 
     // endpoints - admin-only
@@ -220,9 +258,9 @@ pub trait XnMain {
                 expires_at: reservation.until,
             };
 
-            self.domain_name(&name).set(domain_name);
-
-            self.owner_domain_name(&reservation.reserved_for).set(name);
+            self.domain_name(&name).set_if_empty(domain_name);
+            self.owner_domain_name(&reservation.reserved_for)
+                .set_if_empty(name);
         }
     }
 
@@ -267,9 +305,9 @@ pub trait XnMain {
     // }
 
     // storage
-    #[view(get_consent_request)]
-    #[storage_mapper("consent_request")]
-    fn consent_request(&self, address: &ManagedAddress) -> SingleValueMapper<ManagedBuffer>;
+    #[view(get_accept_request)]
+    #[storage_mapper("accept_request")]
+    fn accept_request(&self, domain_name: &ManagedBuffer) -> SingleValueMapper<ManagedAddress>;
 
     #[view(get_domain_name)]
     #[storage_mapper("domain_name")]
@@ -284,8 +322,11 @@ pub trait XnMain {
     fn resolve_domain_name(&self, domain_name: &ManagedBuffer)
         -> SingleValueMapper<ManagedAddress>;
 
-    // events
-
-    // #[event("pongEvent")]
-    // fn pong_event(&self, #[indexed] user: &ManagedAddress);
+    #[view(resolve_domain_name_key)]
+    #[storage_mapper("resolve_key")]
+    fn resolve_domain_name_key(
+        &self,
+        domain_name: &ManagedBuffer,
+        key: &ManagedBuffer,
+    ) -> SingleValueMapper<ManagedBuffer>;
 }

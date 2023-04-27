@@ -19,18 +19,18 @@ multiversx_sc_wasm_adapter::endpoints! {
     xn_main
     (
         register_or_renew
-        update
-        delete
-        consent
-        ping
-        get_ping
-        revokeConsentRequest
+        is_empty
+        update_primary_address
+        update_key_value
+        accept
+        revokeAcceptRequest
         reserve
         set_prices
-        get_consent_request
+        get_accept_request
         get_domain_name
         get_owner_domain_name
         resolve
+        resolve_domain_name_key
     )
 }
 
