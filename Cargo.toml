@@ -1,7 +1,5 @@
 [workspace]
 members = [
-  "ping-pong",
-  "ping-pong/meta",
   "xn-main",
   "xn-main/meta"
 ]
