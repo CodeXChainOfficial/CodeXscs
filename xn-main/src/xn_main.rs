@@ -35,14 +35,27 @@ pub struct Reservation<M: ManagedTypeApi> {
     pub reserved_for: ManagedAddress<M>,
 }
 
+#[allow(clippy::manual_range_contains)]
+fn check_name_char(ch: u8) -> bool {
+    if ch >= b'a' && ch <= b'z' {
+        return true;
+    }
+
+    if ch >= b'0' && ch <= b'9' {
+        return true;
+    }
+
+    false
+}
+
 /// A contract that registers and manages domain names issuance on MultiversX
 #[multiversx_sc::contract]
 pub trait XnMain {
     #[init]
     fn init(&self) {
-        let DEFAULT_PRICES: [u64;5] = [100, 100, 100, 10, 1];
+        let DEFAULT_PRICES_IN_EGLD_CENTS: [u64;5] = [100, 100, 100, 10, 1];
 
-        for price in DEFAULT_PRICES.iter() {
+        for price in DEFAULT_PRICES_IN_EGLD_CENTS.iter() {
             let v = BigUint::from(self.egld_cents(price.clone()));
             self.domain_length_to_yearly_rent_egld().push(&v);
         }
@@ -61,8 +74,12 @@ pub trait XnMain {
 
         let caller = self.blockchain().get_caller();
 
-        self.validate_name(&domain_name);
         require!(years > 0, "Duration (years) must be a positive integer");
+        
+        let is_name_valid = self.is_name_valid(&domain_name);
+        let is_name_valid_message = if is_name_valid.err().is_some() {is_name_valid.err().unwrap()} else {""};
+        require!(is_name_valid.is_ok(), is_name_valid_message);
+
         require!(
             self.can_claim(&caller, &domain_name),
             "name is not available for caller"
@@ -100,16 +117,35 @@ pub trait XnMain {
         }
     }
 
-    fn validate_name(&self, domain_name: &ManagedBuffer) -> bool {
-        require!(domain_name.len() <= MAX_LENGTH, "name too long");
-        require!(domain_name.len() >= MIN_LENGTH, "name too short");
-        
-        // TODO: validate the types of characters
-        // punycode? https://chromium.googlesource.com/chromium/src/+/main/docs/idn.md
+    /// validate_name upon registration
+    /// uses code from mx_dns_sc
+    /// assumes no suffix.
+    /// TODO: punycode? https://chromium.googlesource.com/chromium/src/+/main/docs/idn.md
+    ///       We should support emojis and special chars
+    fn is_name_valid(&self, name: &ManagedBuffer) ->  Result<(), &'static str> {
+        let name_len = name.len();
 
-        // ends with a whitelisted TLD
+        if name_len <= MIN_LENGTH {
+            return Result::Err("name too short");
+        }
 
-        true
+        if name_len > MAX_LENGTH {
+            return Result::Err("name too long");
+        }
+
+        let mut name_bytes = [0u8; MAX_LENGTH];
+        let name_slice = &mut name_bytes[..name_len];
+        if name.load_slice(0, name_slice).is_err() {
+            return Result::Err("error loading name bytes");
+        }
+
+        for ch in name_slice.iter() {
+            if !check_name_char(*ch) {
+                return Result::Err("character not allowed");
+            }
+        }
+
+        Result::Ok(())
     }
 
     fn rent_price(&self, domain_name: &ManagedBuffer, years: &u8) -> BigUint<Self::Api> {
@@ -142,14 +178,10 @@ pub trait XnMain {
 
     fn is_owner(&self, address: &ManagedAddress, domain_name: &ManagedBuffer) -> bool {
         // TODO: has NFT
-        // NFT is the key to ownership
+        // NFT is the key to ownership, when transferred, one should be able to perform owner tasks on a domain name
 
         // is owner/reserved for him
-        if self.owner_domain_name(&domain_name).get() == address.clone() {
-            return true;
-        }
-        
-        false
+        self.owner_domain_name(&domain_name).get() == address.clone()
     }
 
     #[endpoint]
