@@ -19,7 +19,6 @@ multiversx_sc_wasm_adapter::endpoints! {
     xn_main
     (
         register_or_renew
-        is_empty
         update_primary_address
         update_key_value
         accept
@@ -31,6 +30,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         get_owner_domain_name
         resolve
         resolve_domain_name_key
+        get_prices_egld
     )
 }
 

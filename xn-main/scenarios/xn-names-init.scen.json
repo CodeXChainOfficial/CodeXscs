@@ -66,7 +66,14 @@
         "sc:xn-main": {
           "nonce": "0",
           "balance": "0",
-          "storage": {},
+          "storage": {
+            "str:prices.len": "5",
+            "str:prices.item|u32:1": "1000000000000000000",
+            "str:prices.item|u32:2": "1000000000000000000",
+            "str:prices.item|u32:3": "1000000000000000000",
+            "str:prices.item|u32:4": "100000000000000000",
+            "str:prices.item|u32:5": "10000000000000000"
+          },
           "code": "file:../output/xn-main.wasm"
         }
       }
