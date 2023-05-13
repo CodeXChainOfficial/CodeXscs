@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           13
-// Async Callback (empty):               1
-// Total number of exported functions:  15
+// Endpoints:                           21
+// Async Callback:                       1
+// Total number of exported functions:  23
 
 #![no_std]
 #![feature(alloc_error_handler, lang_items)]
@@ -22,16 +22,23 @@ multiversx_sc_wasm_adapter::endpoints! {
         update_primary_address
         update_key_value
         accept
-        revokeAcceptRequest
-        reserve
-        set_prices
+        revoke_accept_request
+        set_reservations
+        clear_reservations
+        update_price_usd
+        fetch_egld_usd_prices
+        issue_token
+        setLocalRoles
+        get_reservation
+        getNftTokenId
         get_accept_request
         get_domain_name
         get_owner_domain_name
         resolve
         resolve_domain_name_key
-        get_prices_egld
+        get_prices_usd
+        get_egld_usd_price
+        get_allowed_top_level_domains
+        callBack
     )
 }
-
-multiversx_sc_wasm_adapter::empty_callback! {}

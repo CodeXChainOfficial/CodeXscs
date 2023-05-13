@@ -1,8 +1,8 @@
 {
     "configurations": {
         "default": {
-            "proxy": "https://devnet-api.multiversx.com",
-            "chainID": "D"
+            "proxy": "http://localhost:7950",
+            "chainID": "local-testnet"
         }
     },
     "contract": {
@@ -15,10 +15,9 @@
                 "str:xnames",
                 "str:xn"
             ],
-            "pem": "~/multiversx/wallets/wallet-owner.pem",
-            "gas-limit": 600000000,
+            "pem": "~/multiversx-sdk/testwallets/latest/users/alice.pem",
+            "gas-limit": 60000000,
             "send": true,
-            "wait-result": true,
             "outfile": "deploy-devnet.interaction.json"
         },
         "call": {
@@ -30,7 +29,7 @@
                 "str:imadeddine",
                 1
             ],
-            "pem": "~/multiversx/wallets/wallet-owner.pem",
+            "pem": "~/multiversx-sdk/testwallets/latest/users/alice.pem",
             "gas-limit": 60000000,
             "simulate": true,
             "outfile": "call-devnet.interaction.json"
