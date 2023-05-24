@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           21
+// Endpoints:                           20
 // Async Callback:                       1
-// Total number of exported functions:  23
+// Total number of exported functions:  22
 
 #![no_std]
 #![feature(alloc_error_handler, lang_items)]
@@ -18,6 +18,7 @@ multiversx_sc_wasm_adapter::panic_handler!();
 multiversx_sc_wasm_adapter::endpoints! {
     xn_main
     (
+        issue_token
         register_or_renew
         update_primary_address
         update_key_value
@@ -27,8 +28,6 @@ multiversx_sc_wasm_adapter::endpoints! {
         clear_reservations
         update_price_usd
         fetch_egld_usd_prices
-        issue_token
-        setLocalRoles
         get_reservation
         getNftTokenId
         get_accept_request
