@@ -97,4 +97,20 @@ pub trait NftModule:
 
         nft_nonce
     }
+
+    fn is_owner_of_nft(
+        &self,
+        owner: &ManagedAddress,
+        nft_nonce: u64
+    ) -> bool {
+        self.require_token_issued();
+        let token_id = self.nft_token_id().get();
+        let balance = self.blockchain().get_esdt_balance(
+            &owner,
+            &token_id,
+            nft_nonce
+        );
+
+        balance == 1
+    }   
 }

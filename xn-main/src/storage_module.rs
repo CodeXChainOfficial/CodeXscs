@@ -8,7 +8,7 @@ pub trait StorageModule {
   // storage
   #[view(get_reservation)]
   #[storage_mapper("reservations")]
-  fn reservations(
+    fn reservations(
       &self,
       domain_name: &ManagedBuffer,
   ) -> SingleValueMapper<Reservation<Self::Api>>;
@@ -24,6 +24,10 @@ pub trait StorageModule {
   #[view(get_domain_name)]
   #[storage_mapper("domain_name")]
   fn domain_name(&self, domain_name: &ManagedBuffer) -> SingleValueMapper<DomainName<Self::Api>>;
+
+  #[view(get_sub_domains)]
+  #[storage_mapper("sub_domains")]
+  fn sub_domains(&self, domain_name: &ManagedBuffer) -> VecMapper<SubDomain<Self::Api>>;
 
   #[view(get_owner_domain_name)]
   #[storage_mapper("owner_domain_name")]

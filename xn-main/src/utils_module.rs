@@ -3,7 +3,7 @@ multiversx_sc::derive_imports!();
 
 use crate::user_builtin;
 use crate::callback_module::*;
-use crate::constant_module::{GRACE_PERIOD, MIN_LENGTH, MAX_LENGTH};
+use crate::constant_module::{GRACE_PERIOD, MIN_LENGTH, MAX_LENGTH, YEAR_IN_SECONDS};
 
 #[allow(clippy::manual_range_contains)]
 fn check_name_char(ch: u8) -> bool {
@@ -25,7 +25,8 @@ fn check_name_char(ch: u8) -> bool {
 #[multiversx_sc::module]
 pub trait UtilsModule: 
   crate::storage_module::StorageModule 
-  + crate::callback_module::CallbackModule {
+  + crate::callback_module::CallbackModule
+  + crate::nft_module::NftModule {
    /// validate_name upon registration
   fn is_name_valid(&self, name: &ManagedBuffer) -> Result<(), &'static str> {
     let name_len = name.len();
@@ -121,7 +122,7 @@ pub trait UtilsModule:
     parts
   }
 
-  fn rent_price(&self, domain_name: &ManagedBuffer, years: &u8) -> BigUint<Self::Api> {
+  fn rent_price(&self, domain_name: &ManagedBuffer, secs: &u64) -> BigUint<Self::Api> {
     let len = domain_name.len();
     let prices_len = self.domain_length_to_yearly_rent_usd().len();
     let price_index = if len < prices_len {
@@ -133,8 +134,8 @@ pub trait UtilsModule:
     let yearly_price_usd = self.domain_length_to_yearly_rent_usd().get(price_index);
     let egld_usd_price = self.egld_usd_price().get();
 
-    let price_egld = BigUint::from(yearly_price_usd * u64::from(years.clone()))
-        * BigUint::from(egld_usd_price);
+    let price_egld = BigUint::from(yearly_price_usd * u64::from(secs.clone()))
+        * BigUint::from(egld_usd_price) / BigUint::from(YEAR_IN_SECONDS);
 
     price_egld
   }
@@ -173,20 +174,29 @@ pub trait UtilsModule:
     return false;
   }
 
-  fn is_owner(&self, address: &ManagedAddress, domain_name: &ManagedBuffer) -> bool {
+  fn get_primary_domain(&self, domain_name: &ManagedBuffer) -> Option<ManagedBuffer> {
     let parts = self.split_domain_name(&domain_name);
     require!(parts.len() >= 2, "domain name is not valid");
   
     let domain_size = parts.get(parts.len() - 2).len() + 1 + parts.get(parts.len() - 1).len();
   
     let name = domain_name.copy_slice(domain_name.len() - domain_size, domain_size);
+    name
+  }
+
+  fn is_owner(&self, address: &ManagedAddress, domain_name: &ManagedBuffer) -> bool {
+    let name = self.get_primary_domain(domain_name);
     match name {
       Option::Some(name) => {
-        if !self.owner_domain_name(&name).is_empty()
-          && self.owner_domain_name(&name).get() == address.clone()
-        {
-          return true;
-        }
+        let domain_empty = self.domain_name(&name).is_empty();
+        require!(!domain_empty, "Primary Domain not registered");
+        let domain_record = self.domain_name(&name).get();
+        let is_owner = self.is_owner_of_nft(
+          &address,
+          domain_record.nft_nonce
+        );
+
+        return is_owner;
     }
       Option::None => {}
     }
@@ -200,27 +210,29 @@ pub trait UtilsModule:
     assign_to: OptionalValue<ManagedAddress>,
   ) {
     let caller = self.blockchain().get_caller();
-
-    if !self.resolve_domain_name(&domain_name).is_empty() {
-      let current_address = self.resolve_domain_name(&domain_name).get();
-      self.user_builtin_proxy(current_address.clone())
-        .del_user_name()
-        .async_call()
-        .with_callback(self.callbacks().del_user_name_callback(&domain_name))
-        .call_and_exit();
-    }
+    let is_owner = self.is_owner(
+      &caller,
+      domain_name
+    );
+    require!(is_owner, "Not owner");
+    
+    let domain_record = self.domain_name(&domain_name).get();
+    let token_id = self.nft_token_id().get();
 
     match assign_to {
       OptionalValue::Some(address) => {
-          if address == caller {
-            self._set_resolve_doamin(&domain_name, &address);
-          } else {
-            self.accept_request(&domain_name).set(address);
+          if address != caller {
+             self.send().direct_esdt(
+              &address,
+              &token_id,
+              domain_record.nft_nonce,
+              &BigUint::from(1 as u64)
+             );
           }
       }
       OptionalValue::None => {}
     }
-  } 
+  }
 
   fn _set_resolve_doamin(&self, domain_name: &ManagedBuffer, address: &ManagedAddress) {
     self.user_builtin_proxy(address.clone())
@@ -231,6 +243,20 @@ pub trait UtilsModule:
               .set_user_name_callback(&domain_name, &address),
       )
       .call_and_exit();
+  }
+
+  fn _fetch_egld_usd_prices(&self) {
+    let oracle_address = self.oracle_address().get();
+    let mut args = ManagedVec::new();
+    args.push(ManagedBuffer::from("egld"));
+    args.push(ManagedBuffer::from("usd"));
+
+    self.send()
+        .contract_call::<()>(oracle_address, ManagedBuffer::from("latestPriceFeed"))
+        .with_raw_arguments(args.into())
+        .async_call()
+        .with_callback(self.callbacks().fetch_egld_usd_prices_callback())
+        .call_and_exit()
   }
 
   #[proxy]

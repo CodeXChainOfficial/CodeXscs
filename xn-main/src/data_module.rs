@@ -43,3 +43,10 @@ pub struct Reservation<M: ManagedTypeApi> {
   pub reserved_for: ManagedAddress<M>,
 }
 
+#[derive(
+  ManagedVecItem, NestedEncode, NestedDecode, TopEncode, TopDecode, Clone, TypeAbi, Default,
+)]
+pub struct SubDomain<M: ManagedTypeApi> {
+  pub name: ManagedBuffer<M>,
+  pub address: ManagedAddress<M>
+}

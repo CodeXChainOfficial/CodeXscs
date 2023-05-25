@@ -21,9 +21,8 @@ multiversx_sc_wasm_adapter::endpoints! {
         issue_token
         register_or_renew
         update_primary_address
+        register_sub_domain
         update_key_value
-        accept
-        revoke_accept_request
         set_reservations
         clear_reservations
         update_price_usd
@@ -32,6 +31,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         getNftTokenId
         get_accept_request
         get_domain_name
+        get_sub_domains
         get_owner_domain_name
         resolve
         resolve_domain_name_key

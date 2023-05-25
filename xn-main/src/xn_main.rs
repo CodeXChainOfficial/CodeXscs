@@ -17,8 +17,15 @@ pub mod constant_module;
 
 use callback_module::*;
 
-use data_module::{Reservation, DomainName, DomainNameAttributes};
-use constant_module::{YEAR_IN_SECONDS};
+use data_module::{Reservation, DomainName, DomainNameAttributes, SubDomain};
+use constant_module::{
+    YEAR_IN_SECONDS, 
+    MONTH_IN_SECONDS, 
+    DAY_IN_SECONDS, 
+    HOUR_IN_SECONDS, 
+    MIN_IN_SECONDS,
+    SUB_DOMAIN_COST_IN_CENT
+};
 
 /// A contract that registers and manages domain names issuance on MultiversX
 #[multiversx_sc::contract]
@@ -50,7 +57,6 @@ pub trait XnMain:
         self.allowed_top_level_domains().push(&tld_mvx);
     }
 
-    // endpoints
     #[only_owner]
     #[payable("EGLD")]
     #[endpoint]
@@ -58,18 +64,21 @@ pub trait XnMain:
         require!(self.nft_token_id().is_empty(), "Token already issued");
 
         let payment_amount = self.call_value().egld_value();
-        let props = NonFungibleTokenProperties {
-            can_freeze: true,
-            can_wipe: true,
-            can_pause: true,
-            can_transfer_create_role: true,
-            can_change_owner: false,
-            can_upgrade: true,
-            can_add_special_roles: true,
-        };
         self.send()
             .esdt_system_sc_proxy()
-            .issue_non_fungible(payment_amount, &token_name, &token_ticker, props)
+            .issue_non_fungible(
+                payment_amount, 
+                &token_name, 
+                &token_ticker, 
+                NonFungibleTokenProperties {
+                    can_freeze: true,
+                    can_wipe: true,
+                    can_pause: true,
+                    can_transfer_create_role: true,
+                    can_change_owner: false,
+                    can_upgrade: false,
+                    can_add_special_roles: true,
+            })
             .async_call()
             .with_callback(self.callbacks().issue_callback())
             .call_and_exit();
@@ -80,14 +89,24 @@ pub trait XnMain:
     fn register_or_renew(
         &self,
         domain_name: ManagedBuffer,
-        years: u8,
+        period: u8,
+        unit: u8, // 0: year, 1: month, 2: day, 3: hour, 4: min
         assign_to: OptionalValue<ManagedAddress>,
     ) {
         let (token, _, payment) = self.call_value().egld_or_single_esdt().into_tuple();
-
         let caller = self.blockchain().get_caller();
+        require!(period > 0, "Duration (years) must be a positive integer");
 
-        require!(years > 0, "Duration (years) must be a positive integer");
+        let unit_seconds = match unit {
+            0 => YEAR_IN_SECONDS,
+            1 => MONTH_IN_SECONDS,
+            2 => DAY_IN_SECONDS,
+            3 => HOUR_IN_SECONDS,
+            4 => MIN_IN_SECONDS,
+            _ => panic!("Wrong date unit")
+        };
+
+        let period_secs: u64 = u64::from(period) * unit_seconds;
 
         let is_name_valid = self.is_name_valid(&domain_name);
         let is_name_valid_message = if is_name_valid.err().is_some() {
@@ -106,7 +125,7 @@ pub trait XnMain:
             "name is not available for caller"
         );
 
-        let price = self.rent_price(&domain_name, &years);
+        let price = self.rent_price(&domain_name, &period_secs);
         require!(price <= payment, "Insufficient EGLD Funds");
 
         let mut since = self.get_current_time();
@@ -126,7 +145,7 @@ pub trait XnMain:
 
         // // Mint NFT for the new owner
         let attributes = DomainNameAttributes {
-            expires_at: since + (u64::from(years) * YEAR_IN_SECONDS),
+            expires_at: since + period_secs,
         };
 
         let nft_nonce = self.mint_nft(&caller, &domain_name, &price, &attributes);
@@ -140,7 +159,6 @@ pub trait XnMain:
         self.domain_name(&domain_name)
             .set(new_domain_record.clone());
         self._update_primary_address(&domain_name, assign_to);
-        self.owner_domain_name(&domain_name).set(caller.clone());
 
         // return extra EGLD if customer sent more than required
         if price < payment {
@@ -163,6 +181,48 @@ pub trait XnMain:
         );
 
         self._update_primary_address(&domain_name_or_sub_domain, assign_to);
+    }
+
+    #[payable("EGLD")]
+    #[endpoint]
+    fn register_sub_domain(
+        &self,
+        sub_domain: ManagedBuffer,
+        address: ManagedAddress
+    ) {
+        let (token, _, payment) = self.call_value().egld_or_single_esdt().into_tuple();
+        let caller = self.blockchain().get_caller();
+        require!(
+            self.is_owner(&caller, &sub_domain),
+            "Not Allowed!"
+        );
+        let primary_domain = self.get_primary_domain(&sub_domain).unwrap();
+        let len = self.sub_domains(&primary_domain).len();
+        let mut is_exist = false;
+        for i in 0..len {
+            let item = self.sub_domains(&primary_domain).get(i);
+            if sub_domain == item.name {
+                is_exist = true;
+                break;
+            }
+        }
+
+        require!(!is_exist, "Already registered");
+        self._fetch_egld_usd_prices();
+        let egld_usd_price = self.egld_usd_price().get();
+        let price_egld = BigUint::from(SUB_DOMAIN_COST_IN_CENT)
+        * BigUint::from(egld_usd_price);
+        require!(price_egld <= payment, "Insufficient EGLD Funds");
+        let new_sub_domain = SubDomain {
+            name: sub_domain,
+            address: address
+        };
+        let _ = &mut self.sub_domains(&primary_domain).push(&new_sub_domain);
+        // return extra EGLD if customer sent more than required
+        if price_egld < payment {
+            let excess = payment - price_egld;
+            self.send().direct(&caller, &token, 0, &excess);
+        }
     }
 
     #[endpoint]
@@ -188,33 +248,6 @@ pub trait XnMain:
                 self.resolve_domain_name_key(&domain_name, &key).clear();
             }
         }
-    }
-
-    #[endpoint]
-    fn accept(&self, domain_name: ManagedBuffer) {
-        let caller = self.blockchain().get_caller();
-
-        // caller has to have a acceptRequest matching the domain_name
-        require!(
-            self.accept_request(&domain_name).get() == caller.clone(),
-            "Caller doesn't have acceptRequest for requested domain name"
-        );
-
-        self._set_resolve_doamin(&domain_name, &caller);
-        self.accept_request(&domain_name).clear();
-    }
-
-    #[endpoint]
-    fn revoke_accept_request(&self, domain_name: ManagedBuffer) {
-        let caller = self.blockchain().get_caller();
-
-        require!(
-            self.is_owner(&caller, &domain_name)
-                || self.accept_request(&domain_name).get() == caller.clone(),
-            "Not Allowed!"
-        );
-
-        self.accept_request(&domain_name).clear();
     }
 
     // endpoints - admin-only
@@ -245,16 +278,6 @@ pub trait XnMain:
     #[only_owner]
     #[endpoint]
     fn fetch_egld_usd_prices(&self) {
-        let oracle_address = self.oracle_address().get();
-        let mut args = ManagedVec::new();
-        args.push(ManagedBuffer::from("egld"));
-        args.push(ManagedBuffer::from("usd"));
-
-        self.send()
-            .contract_call::<()>(oracle_address, ManagedBuffer::from("latestPriceFeed"))
-            .with_raw_arguments(args.into())
-            .async_call()
-            .with_callback(self.callbacks().fetch_egld_usd_prices_callback())
-            .call_and_exit()
+        self._fetch_egld_usd_prices();
     }
 }
