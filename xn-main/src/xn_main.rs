@@ -128,36 +128,33 @@ pub trait XnMain:
         let price = self.rent_price(&domain_name, &period_secs);
         require!(price <= payment, "Insufficient EGLD Funds");
 
-        let mut since = self.get_current_time();
+        let since = self.get_current_time();
 
         let domain_record_exists = !self.domain_name(&domain_name).is_empty();
 
-        if domain_record_exists {
-            since = self.domain_name(&domain_name).get().expires_at;
-        }
-
         // NFT functionality
         if domain_record_exists {
-            let nft_nonce = self.domain_name(&domain_name).get().nft_nonce;
-            // Burn NFT for the previous owner
-            self.burn_nft(nft_nonce);
+            require!(self.domain_name(&domain_name).get().expires_at < since, "Domain already exists.");
+            require!(self.is_owner(&caller, &domain_name), "Permission denied.");
+            let mut domain_record = self.domain_name(&domain_name).get();
+            domain_record.expires_at = since + period_secs;
+            self.domain_name(&domain_name).set(domain_record.clone());
+        }
+        else {
+            // // Mint NFT for the new owner
+            let attributes = DomainNameAttributes {
+                expires_at: since + period_secs,
+            };
+            let nft_nonce = self.mint_nft(&caller, &domain_name, &price, &attributes);
+            let new_domain_record = DomainName {
+                name: domain_name.clone(),
+                expires_at: attributes.expires_at,
+                nft_nonce,
+            };
+    
+            self.domain_name(&domain_name).set(new_domain_record.clone());
         }
 
-        // // Mint NFT for the new owner
-        let attributes = DomainNameAttributes {
-            expires_at: since + period_secs,
-        };
-
-        let nft_nonce = self.mint_nft(&caller, &domain_name, &price, &attributes);
-
-        let new_domain_record = DomainName {
-            name: domain_name.clone(),
-            expires_at: attributes.expires_at,
-            nft_nonce,
-        };
-
-        self.domain_name(&domain_name)
-            .set(new_domain_record.clone());
         self._update_primary_address(&domain_name, assign_to);
 
         // return extra EGLD if customer sent more than required
