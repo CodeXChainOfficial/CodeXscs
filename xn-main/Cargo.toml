@@ -13,6 +13,5 @@ features = ["alloc"]
 
 [dependencies.multiversx-sc-modules]
 version = "0.39.8"
-
 [dev-dependencies.multiversx-sc-scenario]
 version = "0.39.8"
