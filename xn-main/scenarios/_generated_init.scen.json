@@ -92,6 +92,7 @@
                         "str:allowed_top_level_domains.item\u0000\u0000\u0000\u0001": "0x6d7678",
                         "str:allowed_top_level_domains.len": "0x01",
                         "str:egld_usd_price": "0xf3be9cccc000",
+                        "str:migration_start_time": "0x",
                         "str:oracle_address": "0x2b32db6c2c0a6235fb1397e8225ea85e0f0e6e8c7b126d0016ccbde0e667151e",
                         "str:prices_usd.item\u0000\u0000\u0000\u0001": "0x2710",
                         "str:prices_usd.item\u0000\u0000\u0000\u0002": "0x2710",

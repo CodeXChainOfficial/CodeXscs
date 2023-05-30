@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           20
+// Endpoints:                           22
 // Async Callback:                       1
-// Total number of exported functions:  22
+// Total number of exported functions:  24
 
 #![no_std]
 #![feature(alloc_error_handler, lang_items)]
@@ -22,6 +22,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         register_or_renew
         update_primary_address
         register_sub_domain
+        migrate_domain
         update_key_value
         set_reservations
         clear_reservations
@@ -38,6 +39,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         get_prices_usd
         get_egld_usd_price
         get_allowed_top_level_domains
+        get_migration_start_time
         callBack
     )
 }
