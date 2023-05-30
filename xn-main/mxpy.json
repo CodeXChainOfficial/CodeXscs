@@ -5,35 +5,17 @@
             "chainID": "D"
         }
     },
-    "contract": {
-        "deploy": {
+    "contract":{
+        "deploy":{
             "verbose": true,
             "bytecode": "output/xn-main.wasm",
             "recall-nonce": true,
-            "arguments": [
-                "erd1qqqqqqqqqqqqqpgqsj7m22r09nu8seqmdrcmn5f6038qqdq7707qvs0pe0",
-                "str:xnames",
-                "str:xn"
-            ],
-            "pem": "~/multiversx/wallets/wallet-owner.pem",
-            "gas-limit": 600000000,
-            "send": true,
-            "wait-result": true,
-            "outfile": "deploy-devnet.interaction.json"
-        },
-        "call": {
-            "verbose": true,
-            "recall-nonce": true,
-            "function": "register_or_renew",
-            "value": 1000000000000000000,
-            "arguments": [
-                "str:imadeddine",
-                1
-            ],
-            "pem": "~/multiversx/wallets/wallet-owner.pem",
+            "pem": "./walletKey.pem",
             "gas-limit": 60000000,
-            "simulate": true,
-            "outfile": "call-devnet.interaction.json"
+            "arguments": [],
+            "send": true,
+            "outfile": "deploy-testnet.interaction.json"
         }
-    }
+     }
 }
+

@@ -4,7 +4,7 @@
 
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
-
+use core::ops::Deref;
 // use crate::idna::{ToAscii, ToUnicode};
 
 pub mod user_builtin;
@@ -24,7 +24,8 @@ use constant_module::{
     DAY_IN_SECONDS, 
     HOUR_IN_SECONDS, 
     MIN_IN_SECONDS,
-    SUB_DOMAIN_COST_IN_CENT
+    SUB_DOMAIN_COST_IN_CENT,
+    MIGRATION_PERIOD
 };
 
 /// A contract that registers and manages domain names issuance on MultiversX
@@ -51,7 +52,8 @@ pub trait XnMain:
 
         // set default EGLD/USD price
         self.egld_usd_price().set(268000000000000 as u64);
-
+        // set default Migration start time.
+        self.migration_start_time().set(self.get_current_time());
         // Initialize the allowed top-level domain names
         let tld_mvx = ManagedBuffer::from("mvx");
         self.allowed_top_level_domains().push(&tld_mvx);
@@ -116,7 +118,7 @@ pub trait XnMain:
         };
         require!(is_name_valid.is_ok(), is_name_valid_message);
 
-        // no subdomains, no TLDs accepted.
+        // no subdomains
         let parts = self.split_domain_name(&domain_name);
         require!(parts.len() == 2, "You can only register domain names");
 
@@ -134,8 +136,8 @@ pub trait XnMain:
 
         // NFT functionality
         if domain_record_exists {
-            require!(self.domain_name(&domain_name).get().expires_at < since, "Domain already exists.");
-            require!(self.is_owner(&caller, &domain_name), "Permission denied.");
+            // require!(self.domain_name(&domain_name).get().expires_at + GRACE_PERIOD < since, "Domain already exists.");
+            // require!(self.is_owner(&caller, &domain_name), "Permission denied.");
             let mut domain_record = self.domain_name(&domain_name).get();
             domain_record.expires_at = since + period_secs;
             self.domain_name(&domain_name).set(domain_record.clone());
@@ -220,6 +222,42 @@ pub trait XnMain:
             let excess = payment - price_egld;
             self.send().direct(&caller, &token, 0, &excess);
         }
+    }
+
+    #[endpoint]
+    fn migrate_domain(
+        &self,
+        domain_name: ManagedBuffer
+    ) {
+        let caller = self.blockchain().get_caller();
+        let is_exist = !self.reservations(&domain_name).is_empty();
+        require!(is_exist, "Domain not exist");
+        let reservation = self.reservations(&domain_name).get();
+        require!(reservation.reserved_for == caller, "Not owner");
+        let migration_start_time = self.migration_start_time().get();
+        let current_time = self.get_current_time();
+        require!(current_time< migration_start_time + MIGRATION_PERIOD, "Period exceeded for migration");
+        // no subdomains
+        let parts = self.split_domain_name(&domain_name);
+        require!(parts.len() == 2, "You can only register domain names");
+        let mut new_domain_name: ManagedBuffer = parts.get(0).deref().clone();
+        new_domain_name.append(&ManagedBuffer::from(".mvx"));
+        let domain_record_exists = !self.domain_name(&new_domain_name).is_empty();
+        require!(!domain_record_exists, "Domain already migrated.");
+        
+         // // Mint NFT for the new owner
+        let attributes = DomainNameAttributes {
+            expires_at: reservation.until,
+        };
+        let nft_nonce = self.mint_nft(&caller, &new_domain_name, &BigUint::from(0 as u64), &attributes);
+        let new_domain_record = DomainName {
+            name: new_domain_name.clone(),
+            expires_at: attributes.expires_at,
+            nft_nonce,
+        };
+
+        self.domain_name(&new_domain_name).set(new_domain_record.clone());
+        self.reservations(&new_domain_name).clear();
     }
 
     #[endpoint]

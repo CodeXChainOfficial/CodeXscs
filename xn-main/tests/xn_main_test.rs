@@ -1,7 +1,8 @@
 use xn_main::*;
 use xn_main::storage_module::StorageModule;
+use xn_main::data_module::*;
 use multiversx_sc::{
-  types::{Address},
+  types::{Address, ManagedVec},
   codec::{Empty, multi_types::OptionalValue},
 };
 
@@ -414,4 +415,205 @@ fn register_sub_domain() {
   //   &rust_biguint!(0),
   //   None,
   // );
+}
+
+/*
+test for set resrevations
+*/
+#[test]
+fn set_reservations() {
+  let mut contract_setup = setup_contract(xn_main::contract_obj);
+  let b_wrapper = &mut contract_setup.blockchain_wrapper;
+  let owner_addr = &contract_setup.owner_address; 
+  let user_addr = &contract_setup.first_user_address;
+  let second_user_addr = &contract_setup.second_user_address;
+  let DEFAULT_USD_TO_EGLD = rust_biguint!(USD_TO_EGLD);
+  let block_timestamp: u64 = 1000;
+  let mut global_token_id: &[u8] = &[];
+  let mut global_nounce: u64 = 0;
+  
+  b_wrapper.set_block_timestamp(block_timestamp);
+  // set reservations
+  b_wrapper
+    .execute_tx(
+      owner_addr,
+      &contract_setup.contract_wrapper,
+      &(rust_biguint!(100_000) * DEFAULT_USD_TO_EGLD.clone()),
+      |sc| {
+        let first_old_domain_name = managed_buffer!(b"first.elrond");
+        let second_old_domain_name = managed_buffer!(b"second.elrond");
+        let first_old_domain_until = block_timestamp + 30 * 24 * 60 * 60; // 1 month
+        let second_old_domain_until = block_timestamp + 2 * 30 * 24 * 60 * 60; // 2 month
+        let managed_first_user = managed_address!(user_addr);
+        let managed_second_user = managed_address!(second_user_addr);
+        let mut reservations = ManagedVec::new();
+        reservations.push(Reservation::<DebugApi> {
+          domain_name: first_old_domain_name.clone(),
+          until: first_old_domain_until.clone(),
+          reserved_for: managed_first_user
+        });
+        reservations.push(Reservation::<DebugApi> {
+          domain_name: second_old_domain_name.clone(),
+          until: second_old_domain_until.clone(),
+          reserved_for: managed_second_user
+        });
+        sc.set_reservations(reservations);
+        let first_reservation = sc.reservations(&first_old_domain_name).get();
+        assert_eq!(first_reservation.domain_name, first_old_domain_name);
+        assert_eq!(first_reservation.until, first_old_domain_until);
+        assert_eq!(first_reservation.reserved_for.to_address(), *user_addr);
+        let second_reservation = sc.reservations(&second_old_domain_name).get();
+        assert_eq!(second_reservation.domain_name, second_old_domain_name);
+        assert_eq!(second_reservation.until, second_old_domain_until);
+        assert_eq!(second_reservation.reserved_for.to_address(), *second_user_addr);
+      },
+    )
+    .assert_ok();
+}
+
+
+
+/*
+test for clearing resrevations
+*/
+#[test]
+fn clear_reservations() {
+  let mut contract_setup = setup_contract(xn_main::contract_obj);
+  let b_wrapper = &mut contract_setup.blockchain_wrapper;
+  let owner_addr = &contract_setup.owner_address; 
+  let user_addr = &contract_setup.first_user_address;
+  let second_user_addr = &contract_setup.second_user_address;
+  let DEFAULT_USD_TO_EGLD = rust_biguint!(USD_TO_EGLD);
+  let block_timestamp: u64 = 1000;
+  let mut global_token_id: &[u8] = &[];
+  let mut global_nounce: u64 = 0;
+  
+  b_wrapper.set_block_timestamp(block_timestamp);
+  // set reservations
+  b_wrapper
+    .execute_tx(
+      owner_addr,
+      &contract_setup.contract_wrapper,
+      &(rust_biguint!(100_000) * DEFAULT_USD_TO_EGLD.clone()),
+      |sc| {
+        let first_old_domain_name = managed_buffer!(b"first.elrond");
+        let second_old_domain_name = managed_buffer!(b"second.elrond");
+        let first_old_domain_until = block_timestamp + 30 * 24 * 60 * 60; // 1 month
+        let second_old_domain_until = block_timestamp + 2 * 30 * 24 * 60 * 60; // 2 month
+        let managed_first_user = managed_address!(user_addr);
+        let managed_second_user = managed_address!(second_user_addr);
+        let mut reservations = ManagedVec::new();
+        reservations.push(Reservation::<DebugApi> {
+          domain_name: first_old_domain_name.clone(),
+          until: first_old_domain_until.clone(),
+          reserved_for: managed_first_user
+        });
+        reservations.push(Reservation::<DebugApi> {
+          domain_name: second_old_domain_name.clone(),
+          until: second_old_domain_until.clone(),
+          reserved_for: managed_second_user
+        });
+        sc.set_reservations(reservations.clone());
+        let first_reservation = sc.reservations(&first_old_domain_name).get();
+        assert_eq!(first_reservation.domain_name, first_old_domain_name);
+        assert_eq!(first_reservation.until, first_old_domain_until);
+        assert_eq!(first_reservation.reserved_for.to_address(), *user_addr);
+        let second_reservation = sc.reservations(&second_old_domain_name).get();
+        assert_eq!(second_reservation.domain_name, second_old_domain_name);
+        assert_eq!(second_reservation.until, second_old_domain_until);
+        assert_eq!(second_reservation.reserved_for.to_address(), *second_user_addr);
+
+        // clear reservations
+        let mut clear_reservations =  ManagedVec::new();
+        clear_reservations.push(first_old_domain_name.clone());
+        clear_reservations.push(second_old_domain_name.clone());
+        sc.clear_reservations(clear_reservations);
+        let empty_first_reservation = sc.reservations(&first_old_domain_name).is_empty();
+        assert_eq!(empty_first_reservation, true);
+        let empty_second_reservation = sc.reservations(&second_old_domain_name).is_empty();
+        assert_eq!(empty_second_reservation, true);
+
+      },
+    )
+    .assert_ok();
+}
+
+/*
+test for migrating domain
+*/
+#[test]
+fn migrate() {
+  let mut contract_setup = setup_contract(xn_main::contract_obj);
+  let b_wrapper = &mut contract_setup.blockchain_wrapper;
+  let owner_addr = &contract_setup.owner_address; 
+  let user_addr = &contract_setup.first_user_address;
+  let second_user_addr = &contract_setup.second_user_address;
+  let DEFAULT_USD_TO_EGLD = rust_biguint!(USD_TO_EGLD);
+  let block_timestamp: u64 = 1000;
+  let mut global_token_id: &[u8] = &[];
+  let mut global_nounce: u64 = 0;
+  
+  b_wrapper.set_block_timestamp(block_timestamp);
+  // set reservations
+  b_wrapper
+    .execute_tx(
+      owner_addr,
+      &contract_setup.contract_wrapper,
+      &(rust_biguint!(100_000) * DEFAULT_USD_TO_EGLD.clone()),
+      |sc| {
+        let first_old_domain_name = managed_buffer!(b"first.elrond");
+        let second_old_domain_name = managed_buffer!(b"second.elrond");
+        let first_old_domain_until = block_timestamp + 30 * 24 * 60 * 60; // 1 month
+        let second_old_domain_until = block_timestamp + 2 * 30 * 24 * 60 * 60; // 2 month
+        let managed_first_user = managed_address!(user_addr);
+        let managed_second_user = managed_address!(second_user_addr);
+        let mut reservations = ManagedVec::new();
+        reservations.push(Reservation::<DebugApi> {
+          domain_name: first_old_domain_name.clone(),
+          until: first_old_domain_until.clone(),
+          reserved_for: managed_first_user
+        });
+        reservations.push(Reservation::<DebugApi> {
+          domain_name: second_old_domain_name.clone(),
+          until: second_old_domain_until.clone(),
+          reserved_for: managed_second_user
+        });
+        sc.set_reservations(reservations);
+        let first_reservation = sc.reservations(&first_old_domain_name).get();
+        assert_eq!(first_reservation.domain_name, first_old_domain_name);
+        assert_eq!(first_reservation.until, first_old_domain_until);
+        assert_eq!(first_reservation.reserved_for.to_address(), *user_addr);
+        let second_reservation = sc.reservations(&second_old_domain_name).get();
+        assert_eq!(second_reservation.domain_name, second_old_domain_name);
+        assert_eq!(second_reservation.until, second_old_domain_until);
+        assert_eq!(second_reservation.reserved_for.to_address(), *second_user_addr);
+      },
+    )
+    .assert_ok();
+
+    // migrate first domain
+    b_wrapper
+    .execute_tx(
+      user_addr,
+      &contract_setup.contract_wrapper,
+      &(rust_biguint!(100_000) * DEFAULT_USD_TO_EGLD.clone()),
+      |sc| {
+        let token_name = managed_buffer!(TOKEN_NAME);
+        let token_ticker = managed_buffer!(TOKEN_TICKER);
+        sc.issue_token(
+          token_name.clone(),
+          token_ticker.clone()
+        );
+        let first_old_domain_name = managed_buffer!(b"first.elrond");
+        let first_new_domain_name = managed_buffer!(b"first.mvx");
+        let reservation = sc.reservations(&first_old_domain_name).get();
+        sc.migrate_domain(first_old_domain_name.clone());
+        let exist_new_domain = !sc.domain_name(&first_new_domain_name).is_empty();
+        assert_eq!(exist_new_domain, true);
+        let new_domain = sc.domain_name(&first_new_domain_name).get();
+        assert_eq!(new_domain.name.eq(&first_new_domain_name), true);
+        assert_eq!(new_domain.expires_at, reservation.until);
+      },
+    )
+    .assert_ok();
 }

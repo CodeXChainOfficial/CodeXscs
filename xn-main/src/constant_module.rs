@@ -11,3 +11,4 @@ pub const MIN_LENGTH: usize = 3;
 pub const MAX_LENGTH: usize = 256;
 pub const NFT_AMOUNT: u32 = 1;
 pub const SUB_DOMAIN_COST_IN_CENT: u64 = 250;
+pub const MIGRATION_PERIOD: u64 = 90 * 24 * 60 * 60; // 90 days

@@ -60,4 +60,8 @@ pub trait StorageModule {
   #[view(get_allowed_top_level_domains)]
   #[storage_mapper("allowed_top_level_domains")]
   fn allowed_top_level_domains(&self) -> VecMapper<ManagedBuffer>;
+
+  #[view(get_migration_start_time)]
+  #[storage_mapper("migration_start_time")]
+  fn migration_start_time(&self) -> SingleValueMapper<u64>;
 }
