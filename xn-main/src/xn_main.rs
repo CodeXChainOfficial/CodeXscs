@@ -304,9 +304,19 @@ pub trait XnMain:
         let nft_token_id_mapper = self.nft_token_id();
         let domain_name_mapper = self.domain_name(&domain_name);
         let caller = self.blockchain().get_caller();
+
+        require!(
+           &caller != &new_owner,
+           "can't transfer domain"
+        );
+
+        require!(
+            !domain_name_mapper.is_empty(),
+            "wrong domain name"
+        );
         
         require!(
-            self.is_owner(&caller, &domain_name),
+            domain_name_mapper.get().nft_nonce == token_nonce,
             "Not Allowed!"
         );
 
@@ -345,12 +355,20 @@ pub trait XnMain:
         let mut sub_domain_mapper = self.sub_domains(&primary_domain);
         let len = sub_domain_mapper.len();
 
+        let mut flag = false;
+
         for i in 0..len {
             if sub_domain_mapper.get(i).name == sub_domain_name {
                 sub_domain_mapper.swap_remove(i);
+                flag = true;
                 break;
             }
         }
+
+        require!(
+            flag == true,
+            "there is no sub domain to remove"
+        )
 
     }
     // endpoints - admin-only
