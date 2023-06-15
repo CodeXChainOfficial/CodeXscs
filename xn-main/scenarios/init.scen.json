@@ -1,0 +1,134 @@
+{
+    "name": "deployment test",
+    "gasSchedule": "v4",
+    "steps": [
+      {
+        "step": "setState",
+        "accounts": {
+          "address:owner": {
+            "nonce": "0",
+            "balance": "100,000,000,000,000,000,000",
+            "storage": {}
+          },
+          "address:oracle": {
+            "nonce": "0",
+            "balance": "100,000,000,000,000,000,000",
+            "storage": {}
+          },
+          "address:first_bidder": {
+            "nonce": "0",
+            "balance": "100,000,000,000,000,000,000",
+            "storage": {}
+          },
+          "address:second_bidder": {
+            "nonce": "0",
+            "balance": "100,000,000,000,000,000,000",
+            "storage": {}
+          }
+        },
+        "newAddresses": [
+          {
+            "creatorAddress": "address:owner",
+            "creatorNonce": "0",
+            "newAddress": "sc:xname"
+          }
+        ]
+      },
+      {
+        "step": "scDeploy",
+        "txId": "deploy",
+        "tx": {
+          "from": "address:owner",
+          "contractCode": "file:../output/xn-main.wasm",
+          "value": "0",
+          "arguments": ["address:oracle"],
+          "gasLimit": "60,000,000",
+          "gasPrice": "0"
+        },
+        "expect": {
+          "status": "0",
+          "gas": "*",
+          "refund": "*"
+        }
+      },
+      {
+        "step": "checkState",
+        "accounts": {
+          "address:owner": {
+            "nonce": "1",
+            "balance": "100,000,000,000,000,000,000",
+            "storage": {}
+          },
+          "address:oracle": {
+            "nonce": "0",
+            "balance": "100,000,000,000,000,000,000",
+            "storage": {}
+          },
+          "address:first_bidder": {
+            "nonce": "0",
+            "balance": "100,000,000,000,000,000,000",
+            "storage": {}
+          },
+          "address:second_bidder": {
+            "nonce": "0",
+            "balance": "100,000,000,000,000,000,000",
+            "storage": {}
+          },
+          "sc:xname": {
+            "nonce": "0",
+            "balance": "0",
+            "storage": {
+                "str:oracle_address": "address:oracle",
+                "str:egld_usd_price": "268000000000000",
+                "str:allowed_top_level_domains.len":"1",
+                "str:allowed_top_level_domains.item|u32:1":"str:mvx",
+                "str:prices_usd.len": "5",
+                "str:prices_usd.item|u32:1": "10000",
+                "str:prices_usd.item|u32:2": "10000",
+                "str:prices_usd.item|u32:3": "10000",
+                "str:prices_usd.item|u32:4": "1000",
+                "str:prices_usd.item|u32:5": "100"
+            },
+            "code": "file:../output/xn-main.wasm"
+          }
+        }
+      },
+
+      {
+        "step": "setState",
+        "comment": "set current block timestamp",
+        "currentBlockInfo": {
+            "blockTimestamp": "100,000"
+        },
+        "accounts": {
+          "sc:xname": {
+            "nonce": "0",
+            "balance": "0",
+            "storage": {
+                "str:oracle_address": "address:oracle",
+                "str:egld_usd_price": "268000000000000",
+                "str:allowed_top_level_domains.len":"1",
+                "str:allowed_top_level_domains.item|u32:1":"str:mvx",
+                "str:prices_usd.len": "5",
+                "str:prices_usd.item|u32:1": "10000",
+                "str:prices_usd.item|u32:2": "10000",
+                "str:prices_usd.item|u32:3": "10000",
+                "str:prices_usd.item|u32:4": "1000",
+                "str:prices_usd.item|u32:5": "100",
+                "str:nftTokenId": "str:NFT-123456"
+            },
+            "esdt": {
+              "str:NFT-123456": {
+                "lastNonce": "0",
+                "roles": [
+                  "ESDTRoleNFTCreate",
+                  "ESDTRoleNFTBurn"
+                ]
+              }
+            },
+            "code": "file:../output/xn-main.wasm"
+          }
+        }
+      }
+    ]
+}

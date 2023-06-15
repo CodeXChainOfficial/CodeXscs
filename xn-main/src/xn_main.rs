@@ -25,7 +25,8 @@ use constant_module::{
     HOUR_IN_SECONDS, 
     MIN_IN_SECONDS,
     SUB_DOMAIN_COST_IN_CENT,
-    MIGRATION_PERIOD
+    MIGRATION_PERIOD,
+    NFT_AMOUNT
 };
 
 /// A contract that registers and manages domain names issuance on MultiversX
@@ -147,7 +148,15 @@ pub trait XnMain:
             let attributes = DomainNameAttributes {
                 expires_at: since + period_secs,
             };
-            let nft_nonce = self.mint_nft(&caller, &domain_name, &price, &attributes);
+            let nft_nonce;
+            match assign_to {
+                OptionalValue::Some(to) => {
+                    nft_nonce = self.mint_nft(&to, &domain_name, &price, &attributes);
+                },
+                OptionalValue::None => {
+                    nft_nonce = self.mint_nft(&caller, &domain_name, &price, &attributes);
+                }
+            }
             let new_domain_record = DomainName {
                 name: domain_name.clone(),
                 expires_at: attributes.expires_at,
@@ -157,7 +166,7 @@ pub trait XnMain:
             self.domain_name(&domain_name).set(new_domain_record.clone());
         }
 
-        self._update_primary_address(&domain_name, assign_to);
+        // self._update_primary_address(&domain_name, assign_to);
 
         // return extra EGLD if customer sent more than required
         if price < payment {
@@ -284,7 +293,66 @@ pub trait XnMain:
             }
         }
     }
+    #[payable("*")]
+    #[endpoint]
+    fn transfer_domain(
+        &self,
+        domain_name: ManagedBuffer,
+        new_owner: ManagedAddress
+    ) {
+        let (token_id, token_nonce, amount) = self.call_value().egld_or_single_esdt().into_tuple();
+        let nft_token_id_mapper = self.nft_token_id();
+        let domain_name_mapper = self.domain_name(&domain_name);
+        let caller = self.blockchain().get_caller();
+        
+        require!(
+            self.is_owner(&caller, &domain_name),
+            "Not Allowed!"
+        );
 
+        require!(
+            !nft_token_id_mapper.is_empty(),
+            "Token not issued!"
+        );
+
+        require!(
+            token_id == self.nft_token_id().get() && token_nonce == domain_name_mapper.get().nft_nonce,
+            "wrong Nft"
+        );
+
+        self.send().direct_esdt(
+            &new_owner,
+            &token_id.unwrap_esdt(),
+            token_nonce,
+            &BigUint::from(NFT_AMOUNT),
+        );
+    }
+
+    
+    #[endpoint]
+    fn remove_sub_domain(
+        &self,
+        sub_domain_name: ManagedBuffer,
+    ) {
+        let caller = self.blockchain().get_caller();
+        
+        require!(
+            self.is_owner(&caller, &sub_domain_name),
+            "Not Allowed!"
+        );
+        
+        let primary_domain = self.get_primary_domain(&sub_domain_name).unwrap();
+        let mut sub_domain_mapper = self.sub_domains(&primary_domain);
+        let len = sub_domain_mapper.len();
+
+        for i in 0..len {
+            if sub_domain_mapper.get(i).name == sub_domain_name {
+                sub_domain_mapper.swap_remove(i);
+                break;
+            }
+        }
+
+    }
     // endpoints - admin-only
     #[only_owner]
     #[endpoint]

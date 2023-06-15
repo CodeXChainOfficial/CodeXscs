@@ -1,6 +1,7 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
+use crate::constant_module::NFT_AMOUNT;
 use crate::user_builtin;
 use crate::callback_module::*;
 use crate::constant_module::{GRACE_PERIOD, MIN_LENGTH, MAX_LENGTH, YEAR_IN_SECONDS};
@@ -189,7 +190,16 @@ pub trait UtilsModule:
     match name {
       Option::Some(name) => {
         let domain_empty = self.domain_name(&name).is_empty();
-        require!(!domain_empty, "Primary Domain not registered");
+        /**
+         * fixed error by require
+         */
+        // require!(!domain_empty, "Primary Domain not registered");
+        if domain_empty {
+          return false;
+        }
+        /**
+         * 
+         */
         let domain_record = self.domain_name(&name).get();
         let is_owner = self.is_owner_of_nft(
           &address,
@@ -226,7 +236,7 @@ pub trait UtilsModule:
               &address,
               &token_id,
               domain_record.nft_nonce,
-              &BigUint::from(1 as u64)
+              &BigUint::from(NFT_AMOUNT)
              );
           }
       }

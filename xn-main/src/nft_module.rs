@@ -47,6 +47,7 @@ pub trait NftModule:
         );
 
         nft_nonce
+        // 1u64
     }
 
     fn require_token_issued(&self) {
