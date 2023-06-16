@@ -50,6 +50,13 @@
             "outputs": []
         },
         {
+            "name": "set_local_roles",
+            "onlyOwner": true,
+            "mutability": "mutable",
+            "inputs": [],
+            "outputs": []
+        },
+        {
             "name": "register_or_renew",
             "mutability": "mutable",
             "payableInTokens": [
