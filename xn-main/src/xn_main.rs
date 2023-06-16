@@ -228,7 +228,7 @@ pub trait XnMain:
         let primary_domain = self.get_primary_domain(&sub_domain).unwrap();
         let len = self.sub_domains(&primary_domain).len();
         let mut is_exist = false;
-        for i in 1..len {
+        for i in 1..len + 1 {
             let item = self.sub_domains(&primary_domain).get(i);
             if sub_domain == item.name {
                 is_exist = true;
@@ -376,20 +376,33 @@ pub trait XnMain:
         let mut sub_domain_mapper = self.sub_domains(&primary_domain);
         let len = sub_domain_mapper.len();
 
-        let mut flag = false;
+        let mut index = 0;
+        // require!(
+        //     primary_domain == ManagedBuffer::new_from_bytes(b"owner.mvx"),
+        //     "primary domain wrong"
+        // );
+        // require!(
+        //     sub_domain_mapper.get(1).name == ManagedBuffer::new_from_bytes(b"subdomain.owner.mvx"),
+        //     "storage value error"
+        // );
+        // require!(
+        //     sub_domain_name == ManagedBuffer::new_from_bytes(b"subdomain.owner.mvx"),
+        //     "parameter value error"
+        // );
 
-        for i in 1..len {
+        for i in 1..len + 1 {
             if sub_domain_mapper.get(i).name == sub_domain_name {
-                sub_domain_mapper.swap_remove(i);
-                flag = true;
+                index = i;
                 break;
             }
         }
 
         require!(
-            flag == true,
+            index > 0,
             "there is no sub domain to remove"
-        )
+        );
+        sub_domain_mapper.swap_remove(index);
+
 
     }
 
