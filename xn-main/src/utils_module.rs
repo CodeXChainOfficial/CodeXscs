@@ -1,7 +1,10 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
+use multiversx_sc::api::HandleConstraints;
+
 use crate::constant_module::NFT_AMOUNT;
+use crate::constant_module::WEGLD_ID;
 use crate::user_builtin;
 use crate::callback_module::*;
 use crate::constant_module::{GRACE_PERIOD, MIN_LENGTH, MAX_LENGTH, YEAR_IN_SECONDS};
@@ -27,7 +30,9 @@ fn check_name_char(ch: u8) -> bool {
 pub trait UtilsModule: 
   crate::storage_module::StorageModule 
   + crate::callback_module::CallbackModule
-  + crate::nft_module::NftModule {
+  + crate::nft_module::NftModule 
+  + crate::price_oracle_module::PriceOracleModule
+  {
    /// validate_name upon registration
   fn is_name_valid(&self, name: &ManagedBuffer) -> Result<(), &'static str> {
     let name_len = name.len();
@@ -133,6 +138,7 @@ pub trait UtilsModule:
     };
 
     let yearly_price_usd = self.domain_length_to_yearly_rent_usd().get(price_index);
+    self._set_egld_price();
     let egld_usd_price = self.egld_usd_price().get();
 
     let price_egld = BigUint::from(yearly_price_usd * u64::from(secs.clone()))
@@ -140,6 +146,18 @@ pub trait UtilsModule:
 
     price_egld
   }
+
+  fn _set_egld_price(
+    &self
+) {
+    let elgd_price = self.xexchange_pair_get_equivalent(
+        self.oracle_address().get() , 
+        TokenIdentifier::from_esdt_bytes(WEGLD_ID), 
+        BigUint::from(1_000_000_000_000_000_000u64)
+    );
+
+    self.egld_usd_price().set(elgd_price.to_u64().unwrap());
+}
 
   fn get_current_time(&self) -> u64 {
     self.blockchain().get_block_timestamp()

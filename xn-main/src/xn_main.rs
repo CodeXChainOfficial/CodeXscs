@@ -14,6 +14,7 @@ pub mod storage_module;
 pub mod utils_module;
 pub mod data_module;
 pub mod constant_module;
+pub mod price_oracle_module;
 
 use callback_module::*;
 
@@ -35,7 +36,9 @@ pub trait XnMain:
     nft_module::NftModule 
     + callback_module::CallbackModule 
     + storage_module::StorageModule 
-    + utils_module::UtilsModule {
+    + utils_module::UtilsModule 
+    + price_oracle_module::PriceOracleModule
+    {
 
     #[init]
     fn init(
@@ -52,7 +55,8 @@ pub trait XnMain:
         }
 
         // set default EGLD/USD price
-        self.egld_usd_price().set(268000000000000 as u64);
+        self._set_egld_price();
+        // self.egld_usd_price().set(268000000000000 as u64);
         // set default Migration start time.
         self.migration_start_time().set(self.get_current_time());
         // Initialize the allowed top-level domain names
@@ -85,6 +89,23 @@ pub trait XnMain:
             .async_call()
             .with_callback(self.callbacks().issue_callback())
             .call_and_exit();
+    }
+
+
+    #[only_owner]
+    #[endpoint(set_local_roles)]
+    fn set_local_roles(&self) {
+        require!(!self.nft_token_id().is_empty() , "Token not issued");
+
+        self.send()
+            .esdt_system_sc_proxy()
+            .set_special_roles(
+                &self.blockchain().get_sc_address(),
+                &self.nft_token_id().get(),
+                (&[EsdtLocalRole::NftCreate][..]).into_iter().cloned(),
+            )
+            .async_call()
+            .call_and_exit()
     }
 
     #[payable("EGLD")]
@@ -207,7 +228,7 @@ pub trait XnMain:
         let primary_domain = self.get_primary_domain(&sub_domain).unwrap();
         let len = self.sub_domains(&primary_domain).len();
         let mut is_exist = false;
-        for i in 0..len {
+        for i in 1..len {
             let item = self.sub_domains(&primary_domain).get(i);
             if sub_domain == item.name {
                 is_exist = true;
@@ -216,10 +237,10 @@ pub trait XnMain:
         }
 
         require!(!is_exist, "Already registered");
-        self._fetch_egld_usd_prices();
+        self._set_egld_price();
         let egld_usd_price = self.egld_usd_price().get();
         let price_egld = BigUint::from(SUB_DOMAIN_COST_IN_CENT)
-        * BigUint::from(egld_usd_price);
+            *BigUint::from(10_000_000_000_000_000u64) / BigUint::from(egld_usd_price);
         require!(price_egld <= payment, "Insufficient EGLD Funds");
         let new_sub_domain = SubDomain {
             name: sub_domain,
@@ -357,7 +378,7 @@ pub trait XnMain:
 
         let mut flag = false;
 
-        for i in 0..len {
+        for i in 1..len {
             if sub_domain_mapper.get(i).name == sub_domain_name {
                 sub_domain_mapper.swap_remove(i);
                 flag = true;
@@ -371,6 +392,7 @@ pub trait XnMain:
         )
 
     }
+
     // endpoints - admin-only
     #[only_owner]
     #[endpoint]
