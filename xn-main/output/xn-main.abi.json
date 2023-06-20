@@ -385,6 +385,31 @@
                     "type": "u64"
                 }
             ]
+        },
+        {
+            "name": "getCurrentTime",
+            "mutability": "readonly",
+            "inputs": [],
+            "outputs": [
+                {
+                    "type": "u64"
+                }
+            ]
+        },
+        {
+            "name": "getDomainIsExpires",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "domain_name",
+                    "type": "bytes"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "bool"
+                }
+            ]
         }
     ],
     "events": [],
