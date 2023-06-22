@@ -1,0 +1,466 @@
+{
+    "buildInfo": {
+        "rustc": {
+            "version": "1.69.0-nightly",
+            "commitHash": "d7948c843de94245c794e8c63dd4301a78bb5ba3",
+            "commitDate": "2023-01-26",
+            "channel": "Nightly",
+            "short": "rustc 1.69.0-nightly (d7948c843 2023-01-26)"
+        },
+        "contractCrate": {
+            "name": "xn-main",
+            "version": "0.0.1"
+        },
+        "framework": {
+            "name": "multiversx-sc",
+            "version": "0.39.8"
+        }
+    },
+    "docs": [
+        "A contract that registers and manages domain names issuance on MultiversX"
+    ],
+    "name": "XnMain",
+    "constructor": {
+        "inputs": [
+            {
+                "name": "oracle_address",
+                "type": "Address"
+            }
+        ],
+        "outputs": []
+    },
+    "endpoints": [
+        {
+            "name": "issue_token",
+            "onlyOwner": true,
+            "mutability": "mutable",
+            "payableInTokens": [
+                "EGLD"
+            ],
+            "inputs": [
+                {
+                    "name": "token_name",
+                    "type": "bytes"
+                },
+                {
+                    "name": "token_ticker",
+                    "type": "bytes"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "set_local_roles",
+            "onlyOwner": true,
+            "mutability": "mutable",
+            "inputs": [],
+            "outputs": []
+        },
+        {
+            "name": "register_or_renew",
+            "mutability": "mutable",
+            "payableInTokens": [
+                "EGLD"
+            ],
+            "inputs": [
+                {
+                    "name": "domain_name",
+                    "type": "bytes"
+                },
+                {
+                    "name": "period",
+                    "type": "u8"
+                },
+                {
+                    "name": "unit",
+                    "type": "u8"
+                },
+                {
+                    "name": "assign_to",
+                    "type": "optional<Address>",
+                    "multi_arg": true
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "update_primary_address",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "domain_name_or_sub_domain",
+                    "type": "bytes"
+                },
+                {
+                    "name": "assign_to",
+                    "type": "optional<Address>",
+                    "multi_arg": true
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "register_sub_domain",
+            "mutability": "mutable",
+            "payableInTokens": [
+                "EGLD"
+            ],
+            "inputs": [
+                {
+                    "name": "sub_domain",
+                    "type": "bytes"
+                },
+                {
+                    "name": "address",
+                    "type": "Address"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "migrate_domain",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "domain_name",
+                    "type": "bytes"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "update_key_value",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "domain_name",
+                    "type": "bytes"
+                },
+                {
+                    "name": "key",
+                    "type": "bytes"
+                },
+                {
+                    "name": "value",
+                    "type": "optional<bytes>",
+                    "multi_arg": true
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "transfer_domain",
+            "mutability": "mutable",
+            "payableInTokens": [
+                "*"
+            ],
+            "inputs": [
+                {
+                    "name": "domain_name",
+                    "type": "bytes"
+                },
+                {
+                    "name": "new_owner",
+                    "type": "Address"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "remove_sub_domain",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "sub_domain_name",
+                    "type": "bytes"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "set_reservations",
+            "onlyOwner": true,
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "reservations",
+                    "type": "List<Reservation>"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "clear_reservations",
+            "onlyOwner": true,
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "domain_names",
+                    "type": "List<bytes>"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "update_price_usd",
+            "onlyOwner": true,
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "domain_length",
+                    "type": "u64"
+                },
+                {
+                    "name": "yearly_rent_usd",
+                    "type": "u64"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "fetch_egld_usd_prices",
+            "onlyOwner": true,
+            "mutability": "mutable",
+            "inputs": [],
+            "outputs": []
+        },
+        {
+            "name": "get_reservation",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "domain_name",
+                    "type": "bytes"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "Reservation"
+                }
+            ]
+        },
+        {
+            "name": "getNftTokenId",
+            "mutability": "readonly",
+            "inputs": [],
+            "outputs": [
+                {
+                    "type": "TokenIdentifier"
+                }
+            ]
+        },
+        {
+            "name": "get_accept_request",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "domain_name",
+                    "type": "bytes"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "Address"
+                }
+            ]
+        },
+        {
+            "name": "get_domain_name",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "domain_name",
+                    "type": "bytes"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "DomainName"
+                }
+            ]
+        },
+        {
+            "name": "get_sub_domains",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "domain_name",
+                    "type": "bytes"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "variadic<SubDomain>",
+                    "multi_result": true
+                }
+            ]
+        },
+        {
+            "name": "get_owner_domain_name",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "domain_name",
+                    "type": "bytes"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "Address"
+                }
+            ]
+        },
+        {
+            "name": "resolve",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "domain_name",
+                    "type": "bytes"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "Address"
+                }
+            ]
+        },
+        {
+            "name": "resolve_domain_name_key",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "domain_name",
+                    "type": "bytes"
+                },
+                {
+                    "name": "key",
+                    "type": "bytes"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "bytes"
+                }
+            ]
+        },
+        {
+            "name": "get_prices_usd",
+            "mutability": "readonly",
+            "inputs": [],
+            "outputs": [
+                {
+                    "type": "variadic<u64>",
+                    "multi_result": true
+                }
+            ]
+        },
+        {
+            "name": "get_egld_usd_price",
+            "mutability": "readonly",
+            "inputs": [],
+            "outputs": [
+                {
+                    "type": "u64"
+                }
+            ]
+        },
+        {
+            "name": "get_allowed_top_level_domains",
+            "mutability": "readonly",
+            "inputs": [],
+            "outputs": [
+                {
+                    "type": "variadic<bytes>",
+                    "multi_result": true
+                }
+            ]
+        },
+        {
+            "name": "get_migration_start_time",
+            "mutability": "readonly",
+            "inputs": [],
+            "outputs": [
+                {
+                    "type": "u64"
+                }
+            ]
+        },
+        {
+            "name": "getCurrentTime",
+            "mutability": "readonly",
+            "inputs": [],
+            "outputs": [
+                {
+                    "type": "u64"
+                }
+            ]
+        },
+        {
+            "name": "getDomainIsExpires",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "domain_name",
+                    "type": "bytes"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "bool"
+                }
+            ]
+        }
+    ],
+    "events": [],
+    "hasCallback": true,
+    "types": {
+        "DomainName": {
+            "type": "struct",
+            "fields": [
+                {
+                    "name": "name",
+                    "type": "bytes"
+                },
+                {
+                    "name": "expires_at",
+                    "type": "u64"
+                },
+                {
+                    "name": "nft_nonce",
+                    "type": "u64"
+                }
+            ]
+        },
+        "Reservation": {
+            "type": "struct",
+            "fields": [
+                {
+                    "name": "domain_name",
+                    "type": "bytes"
+                },
+                {
+                    "name": "until",
+                    "type": "u64"
+                },
+                {
+                    "name": "reserved_for",
+                    "type": "Address"
+                }
+            ]
+        },
+        "SubDomain": {
+            "type": "struct",
+            "fields": [
+                {
+                    "name": "name",
+                    "type": "bytes"
+                },
+                {
+                    "name": "address",
+                    "type": "Address"
+                }
+            ]
+        }
+    }
+}

@@ -1,0 +1,98 @@
+{
+    "name": "Register Or Renew function test",
+    "gasSchedule": "v4",
+    "steps": [
+      {
+          "step": "externalSteps",
+          "path": "init.scen.json"
+      },
+      {
+          "step": "scCall",
+          "txId": "register_or_renew function",
+          "comment": "owner will call register_or_renew function",
+          "tx": {
+              "from": "address:owner",
+              "to": "sc:xname",
+              "value": "10,000,000,000,000,000",
+              "function": "register_or_renew",
+              "arguments": [
+                "str:own.mvx",
+                "1",
+                "4"
+              ],
+              "gasLimit": "12,000,000",
+              "gasPrice": "0"
+          },
+          "expect": {
+              "status": "0",
+              "message": "",
+              "gas": "*",
+              "refund": "*"
+          }
+      },
+      {
+        "step": "checkState",
+        "accounts": {
+          "address:owner": {
+            "nonce": "2",
+            "balance": "*",
+            "storage": {},
+            "esdt": {
+              "str:NFT-123456": {
+                "instances": [
+                  {
+                      "nonce": "1",
+                      "balance": "1",
+                      "creator": "sc:xname"
+                  }
+              ]
+              }
+            }
+          },
+          "address:oracle": {
+            "nonce": "0",
+            "balance": "100,000,000,000,000,000,000",
+            "storage": {}
+          },
+          "address:first_bidder": {
+            "nonce": "0",
+            "balance": "100,000,000,000,000,000,000",
+            "storage": {}
+          },
+          "address:second_bidder": {
+            "nonce": "0",
+            "balance": "100,000,000,000,000,000,000",
+            "storage": {}
+          },
+          "sc:xname": {
+            "nonce": "0",
+            "balance": "509893455098",
+            "storage": {
+                "str:oracle_address": "address:oracle",
+                "str:egld_usd_price": "268000000000000",
+                "str:allowed_top_level_domains.len":"1",
+                "str:allowed_top_level_domains.item|u32:1":"str:mvx",
+                "str:prices_usd.len": "5",
+                "str:prices_usd.item|u32:1": "10000",
+                "str:prices_usd.item|u32:2": "10000",
+                "str:prices_usd.item|u32:3": "10000",
+                "str:prices_usd.item|u32:4": "1000",
+                "str:prices_usd.item|u32:5": "100",
+                "str:nftTokenId": "str:NFT-123456",
+                "str:domain_name|nested:str:own.mvx":"*"
+            },
+            "esdt": {
+              "str:NFT-123456": {
+                "lastNonce": "1",
+                "roles": [
+                  "ESDTRoleNFTCreate",
+                  "ESDTRoleNFTBurn"
+                ]
+              }
+            },
+            "code": "file:../output/xn-main.wasm"
+          }
+        }
+      }
+    ]
+}
