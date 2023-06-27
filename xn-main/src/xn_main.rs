@@ -7,49 +7,39 @@ multiversx_sc::derive_imports!();
 use core::ops::Deref;
 // use crate::idna::{ToAscii, ToUnicode};
 
-pub mod user_builtin;
-pub mod nft_module;
 pub mod callback_module;
-pub mod storage_module;
-pub mod utils_module;
-pub mod data_module;
 pub mod constant_module;
+pub mod data_module;
+pub mod nft_module;
 pub mod price_oracle_module;
+pub mod storage_module;
+pub mod user_builtin;
+pub mod utils_module;
 
 use callback_module::*;
 
-use data_module::{Reservation, DomainName, DomainNameAttributes, SubDomain};
 use constant_module::{
-    YEAR_IN_SECONDS, 
-    MONTH_IN_SECONDS, 
-    DAY_IN_SECONDS, 
-    HOUR_IN_SECONDS, 
-    MIN_IN_SECONDS,
-    SUB_DOMAIN_COST_IN_CENT,
-    MIGRATION_PERIOD,
-    NFT_AMOUNT
+    DAY_IN_SECONDS, HOUR_IN_SECONDS, MIGRATION_PERIOD, MIN_IN_SECONDS, MONTH_IN_SECONDS,
+    NFT_AMOUNT, SUB_DOMAIN_COST_IN_CENT, YEAR_IN_SECONDS,
 };
+use data_module::{DomainName, DomainNameAttributes, Reservation, SubDomain};
 
 /// A contract that registers and manages domain names issuance on MultiversX
 #[multiversx_sc::contract]
-pub trait XnMain: 
-    nft_module::NftModule 
-    + callback_module::CallbackModule 
-    + storage_module::StorageModule 
-    + utils_module::UtilsModule 
+pub trait XnMain:
+    nft_module::NftModule
+    + callback_module::CallbackModule
+    + storage_module::StorageModule
+    + utils_module::UtilsModule
     + price_oracle_module::PriceOracleModule
-    {
-
+{
     #[init]
-    fn init(
-        &self,
-        oracle_address: ManagedAddress
-    ) {
+    fn init(&self, oracle_address: ManagedAddress) {
         // Set the oracle contract address
         self.oracle_address().set(&oracle_address);
 
         let default_prices_in_usd_cents: [u64; 5] = [10000u64, 10000u64, 10000u64, 1000u64, 100];
-        
+
         for (_i, price) in default_prices_in_usd_cents.iter().enumerate() {
             self.domain_length_to_yearly_rent_usd().push(&price);
         }
@@ -74,9 +64,9 @@ pub trait XnMain:
         self.send()
             .esdt_system_sc_proxy()
             .issue_non_fungible(
-                payment_amount, 
-                &token_name, 
-                &token_ticker, 
+                payment_amount,
+                &token_name,
+                &token_ticker,
                 NonFungibleTokenProperties {
                     can_freeze: true,
                     can_wipe: true,
@@ -85,17 +75,17 @@ pub trait XnMain:
                     can_change_owner: false,
                     can_upgrade: false,
                     can_add_special_roles: true,
-            })
+                },
+            )
             .async_call()
             .with_callback(self.callbacks().issue_callback())
             .call_and_exit();
     }
 
-
     #[only_owner]
     #[endpoint(set_local_roles)]
     fn set_local_roles(&self) {
-        require!(!self.nft_token_id().is_empty() , "Token not issued");
+        require!(!self.nft_token_id().is_empty(), "Token not issued");
 
         self.send()
             .esdt_system_sc_proxy()
@@ -127,7 +117,7 @@ pub trait XnMain:
             2 => DAY_IN_SECONDS,
             3 => HOUR_IN_SECONDS,
             4 => MIN_IN_SECONDS,
-            _ => panic!("Wrong date unit")
+            _ => panic!("Wrong date unit"),
         };
 
         let period_secs: u64 = u64::from(period) * unit_seconds;
@@ -163,8 +153,7 @@ pub trait XnMain:
             let mut domain_record = self.domain_name(&domain_name).get();
             domain_record.expires_at = since + period_secs;
             self.domain_name(&domain_name).set(domain_record.clone());
-        }
-        else {
+        } else {
             // // Mint NFT for the new owner
             let attributes = DomainNameAttributes {
                 expires_at: since + period_secs,
@@ -173,7 +162,7 @@ pub trait XnMain:
             match assign_to {
                 OptionalValue::Some(to) => {
                     nft_nonce = self.mint_nft(&to, &domain_name, &price, &attributes);
-                },
+                }
                 OptionalValue::None => {
                     nft_nonce = self.mint_nft(&caller, &domain_name, &price, &attributes);
                 }
@@ -182,9 +171,14 @@ pub trait XnMain:
                 name: domain_name.clone(),
                 expires_at: attributes.expires_at,
                 nft_nonce,
+                avatar: Option::None,
+                location: Option::None,
+                website: Option::None,
+                bio: Option::None,
             };
-    
-            self.domain_name(&domain_name).set(new_domain_record.clone());
+
+            self.domain_name(&domain_name)
+                .set(new_domain_record.clone());
         }
 
         // self._update_primary_address(&domain_name, assign_to);
@@ -194,6 +188,26 @@ pub trait XnMain:
             let excess = payment - price;
             self.send().direct(&caller, &token, 0, &excess);
         }
+    }
+
+    #[endpoint]
+    fn update_domain_profile(&self, domain_name: ManagedBuffer, avatar: ManagedBuffer, location: ManagedBuffer, website: ManagedBuffer, bio: ManagedBuffer) {
+        let domain_record_exists = !self.domain_name(&domain_name).is_empty();
+        require!(domain_record_exists, "Domain not exist");
+
+        let caller = self.blockchain().get_caller();
+
+        require!(
+            self.is_owner(&caller, &domain_name),
+            "Not Allowed!"
+        );
+
+        let mut domain = self.domain_name(&domain_name).get();
+        domain.avatar = Some(avatar);
+        domain.location = Some(location);
+        domain.website = Some(website);
+        domain.bio = Some(bio);
+        self.domain_name(&domain_name).set(&domain);
     }
 
     #[endpoint]
@@ -214,17 +228,10 @@ pub trait XnMain:
 
     #[payable("EGLD")]
     #[endpoint]
-    fn register_sub_domain(
-        &self,
-        sub_domain: ManagedBuffer,
-        address: ManagedAddress
-    ) {
+    fn register_sub_domain(&self, sub_domain: ManagedBuffer, address: ManagedAddress) {
         let (token, _, payment) = self.call_value().egld_or_single_esdt().into_tuple();
         let caller = self.blockchain().get_caller();
-        require!(
-            self.is_owner(&caller, &sub_domain),
-            "Not Allowed!"
-        );
+        require!(self.is_owner(&caller, &sub_domain), "Not Allowed!");
         let primary_domain = self.get_primary_domain(&sub_domain).unwrap();
         let len = self.sub_domains(&primary_domain).len();
         let mut is_exist = false;
@@ -240,11 +247,12 @@ pub trait XnMain:
         self._set_egld_price();
         let egld_usd_price = self.egld_usd_price().get();
         let price_egld = BigUint::from(SUB_DOMAIN_COST_IN_CENT)
-            *BigUint::from(10_000_000_000_000_000u64) / BigUint::from(egld_usd_price);
+            * BigUint::from(10_000_000_000_000_000u64)
+            / BigUint::from(egld_usd_price);
         require!(price_egld <= payment, "Insufficient EGLD Funds");
         let new_sub_domain = SubDomain {
             name: sub_domain,
-            address: address
+            address: address,
         };
         let _ = &mut self.sub_domains(&primary_domain).push(&new_sub_domain);
         // return extra EGLD if customer sent more than required
@@ -255,10 +263,7 @@ pub trait XnMain:
     }
 
     #[endpoint]
-    fn migrate_domain(
-        &self,
-        domain_name: ManagedBuffer
-    ) {
+    fn migrate_domain(&self, domain_name: ManagedBuffer) {
         let caller = self.blockchain().get_caller();
         let is_exist = !self.reservations(&domain_name).is_empty();
         require!(is_exist, "Domain not exist");
@@ -266,7 +271,10 @@ pub trait XnMain:
         require!(reservation.reserved_for == caller, "Not owner");
         let migration_start_time = self.migration_start_time().get();
         let current_time = self.get_current_time();
-        require!(current_time< migration_start_time + MIGRATION_PERIOD, "Period exceeded for migration");
+        require!(
+            current_time < migration_start_time + MIGRATION_PERIOD,
+            "Period exceeded for migration"
+        );
         // no subdomains
         let parts = self.split_domain_name(&domain_name);
         require!(parts.len() == 2, "You can only register domain names");
@@ -274,19 +282,29 @@ pub trait XnMain:
         new_domain_name.append(&ManagedBuffer::from(".mvx"));
         let domain_record_exists = !self.domain_name(&new_domain_name).is_empty();
         require!(!domain_record_exists, "Domain already migrated.");
-        
-         // // Mint NFT for the new owner
+
+        // // Mint NFT for the new owner
         let attributes = DomainNameAttributes {
             expires_at: reservation.until,
         };
-        let nft_nonce = self.mint_nft(&caller, &new_domain_name, &BigUint::from(0 as u64), &attributes);
+        let nft_nonce = self.mint_nft(
+            &caller,
+            &new_domain_name,
+            &BigUint::from(0 as u64),
+            &attributes,
+        );
         let new_domain_record = DomainName {
             name: new_domain_name.clone(),
             expires_at: attributes.expires_at,
             nft_nonce,
+            avatar: Option::None,
+            location: Option::None,
+            website: Option::None,
+            bio: Option::None,
         };
 
-        self.domain_name(&new_domain_name).set(new_domain_record.clone());
+        self.domain_name(&new_domain_name)
+            .set(new_domain_record.clone());
         self.reservations(&new_domain_name).clear();
     }
 
@@ -316,38 +334,26 @@ pub trait XnMain:
     }
     #[payable("*")]
     #[endpoint]
-    fn transfer_domain(
-        &self,
-        domain_name: ManagedBuffer,
-        new_owner: ManagedAddress
-    ) {
+    fn transfer_domain(&self, domain_name: ManagedBuffer, new_owner: ManagedAddress) {
         let (token_id, token_nonce, amount) = self.call_value().egld_or_single_esdt().into_tuple();
         let nft_token_id_mapper = self.nft_token_id();
         let domain_name_mapper = self.domain_name(&domain_name);
         let caller = self.blockchain().get_caller();
 
-        require!(
-           &caller != &new_owner,
-           "can't transfer domain"
-        );
+        require!(&caller != &new_owner, "can't transfer domain");
 
-        require!(
-            !domain_name_mapper.is_empty(),
-            "wrong domain name"
-        );
-        
+        require!(!domain_name_mapper.is_empty(), "wrong domain name");
+
         require!(
             domain_name_mapper.get().nft_nonce == token_nonce,
             "Not Allowed!"
         );
 
-        require!(
-            !nft_token_id_mapper.is_empty(),
-            "Token not issued!"
-        );
+        require!(!nft_token_id_mapper.is_empty(), "Token not issued!");
 
         require!(
-            token_id == self.nft_token_id().get() && token_nonce == domain_name_mapper.get().nft_nonce,
+            token_id == self.nft_token_id().get()
+                && token_nonce == domain_name_mapper.get().nft_nonce,
             "wrong Nft"
         );
 
@@ -359,19 +365,12 @@ pub trait XnMain:
         );
     }
 
-    
     #[endpoint]
-    fn remove_sub_domain(
-        &self,
-        sub_domain_name: ManagedBuffer,
-    ) {
+    fn remove_sub_domain(&self, sub_domain_name: ManagedBuffer) {
         let caller = self.blockchain().get_caller();
-        
-        require!(
-            self.is_owner(&caller, &sub_domain_name),
-            "Not Allowed!"
-        );
-        
+
+        require!(self.is_owner(&caller, &sub_domain_name), "Not Allowed!");
+
         let primary_domain = self.get_primary_domain(&sub_domain_name).unwrap();
         let mut sub_domain_mapper = self.sub_domains(&primary_domain);
         let len = sub_domain_mapper.len();
@@ -397,13 +396,8 @@ pub trait XnMain:
             }
         }
 
-        require!(
-            index > 0,
-            "there is no sub domain to remove"
-        );
+        require!(index > 0, "there is no sub domain to remove");
         sub_domain_mapper.swap_remove(index);
-
-
     }
 
     // endpoints - admin-only

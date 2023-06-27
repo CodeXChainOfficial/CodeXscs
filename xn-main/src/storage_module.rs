@@ -29,6 +29,10 @@ pub trait StorageModule {
   #[storage_mapper("sub_domains")]
   fn sub_domains(&self, domain_name: &ManagedBuffer) -> VecMapper<SubDomain<Self::Api>>;
 
+  #[view(get_primary_domain)]
+  #[storage_mapper("primary_domain")]
+  fn primary_domain(&self, address: &ManagedAddress) -> SingleValueMapper<ManagedBuffer>;
+
   #[view(get_owner_domain_name)]
   #[storage_mapper("owner_domain_name")]
   fn owner_domain_name(&self, domain_name: &ManagedBuffer) -> SingleValueMapper<ManagedAddress>;

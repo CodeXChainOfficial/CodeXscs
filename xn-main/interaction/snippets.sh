@@ -1,10 +1,10 @@
-WALLET_PEM="./wallet-owner.pem"
+WALLET_PEM="./walletKey.pem"
 WASM_PATH="output/xn-main.wasm"
 PROXY=https://devnet-gateway.multiversx.com
 CHAIN_ID=D
 
 ################################################
-ADDRESS=$(mxpy data load --key=address-devnet)
+# ADDRESS=$(mxpy data load --key=address-devnet)
 ################################################
 
 PROXY_DEV_ADDRESS="erd1qqqqqqqqqqqqqpgqq67uv84ma3cekpa55l4l68ajzhq8qm3u0n4s20ecvx"
@@ -12,7 +12,7 @@ PROXY_MAIN_ADDRESS="erd1qqqqqqqqqqqqqpgqeel2kumf0r8ffyhth7pqdujjat9nx0862jpsg2pq
 PROXY_DEV_ADDRESS_HEX="0x$(mxpy wallet bech32 --decode ${PROXY_DEV_ADDRESS})"
 deploy() {
     mxpy --verbose contract deploy \
-    --project=${PROJECT} \
+    --bytecode=${WASM_PATH} \
     --recall-nonce \
     --pem=${WALLET_PEM} \
     --gas-limit=600000000 \
@@ -122,3 +122,5 @@ getSubDomains() {
     --arguments ${DOMAIN_NAME} \
     --proxy=${PROXY}
 }
+
+deploy

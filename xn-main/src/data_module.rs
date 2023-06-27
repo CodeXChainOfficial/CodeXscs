@@ -16,6 +16,10 @@ pub struct DomainName<M: ManagedTypeApi> {
   pub name: ManagedBuffer<M>,
   pub expires_at: u64,
   pub nft_nonce: u64,
+  pub avatar: Option<ManagedBuffer<M>>,
+  pub location: Option<ManagedBuffer<M>>,
+  pub website: Option<ManagedBuffer<M>>,
+  pub bio: Option<ManagedBuffer<M>>
 }
 
 #[derive(

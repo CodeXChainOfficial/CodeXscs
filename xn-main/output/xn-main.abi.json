@@ -2,10 +2,10 @@
     "buildInfo": {
         "rustc": {
             "version": "1.69.0-nightly",
-            "commitHash": "d7948c843de94245c794e8c63dd4301a78bb5ba3",
-            "commitDate": "2023-01-26",
+            "commitHash": "5e37043d63bfe2f3be8fa5a05b07d6c0dad5775d",
+            "commitDate": "2023-01-22",
             "channel": "Nightly",
-            "short": "rustc 1.69.0-nightly (d7948c843 2023-01-26)"
+            "short": "rustc 1.69.0-nightly (5e37043d6 2023-01-22)"
         },
         "contractCrate": {
             "name": "xn-main",
@@ -79,6 +79,33 @@
                     "name": "assign_to",
                     "type": "optional<Address>",
                     "multi_arg": true
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "update_domain_profile",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "domain_name",
+                    "type": "bytes"
+                },
+                {
+                    "name": "avatar",
+                    "type": "bytes"
+                },
+                {
+                    "name": "location",
+                    "type": "bytes"
+                },
+                {
+                    "name": "website",
+                    "type": "bytes"
+                },
+                {
+                    "name": "bio",
+                    "type": "bytes"
                 }
             ],
             "outputs": []
@@ -296,6 +323,21 @@
             ]
         },
         {
+            "name": "get_primary_domain",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "address",
+                    "type": "Address"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "bytes"
+                }
+            ]
+        },
+        {
             "name": "get_owner_domain_name",
             "mutability": "readonly",
             "inputs": [
@@ -385,31 +427,6 @@
                     "type": "u64"
                 }
             ]
-        },
-        {
-            "name": "getCurrentTime",
-            "mutability": "readonly",
-            "inputs": [],
-            "outputs": [
-                {
-                    "type": "u64"
-                }
-            ]
-        },
-        {
-            "name": "getDomainIsExpires",
-            "mutability": "readonly",
-            "inputs": [
-                {
-                    "name": "domain_name",
-                    "type": "bytes"
-                }
-            ],
-            "outputs": [
-                {
-                    "type": "bool"
-                }
-            ]
         }
     ],
     "events": [],
@@ -429,6 +446,22 @@
                 {
                     "name": "nft_nonce",
                     "type": "u64"
+                },
+                {
+                    "name": "avatar",
+                    "type": "Option<bytes>"
+                },
+                {
+                    "name": "location",
+                    "type": "Option<bytes>"
+                },
+                {
+                    "name": "website",
+                    "type": "Option<bytes>"
+                },
+                {
+                    "name": "bio",
+                    "type": "Option<bytes>"
                 }
             ]
         },
