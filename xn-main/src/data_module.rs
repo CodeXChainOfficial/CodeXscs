@@ -1,13 +1,6 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
-#[derive(TypeAbi, TopEncode, TopDecode)]
-pub struct PriceTag<M: ManagedTypeApi> {
-    pub token: EgldOrEsdtTokenIdentifier<M>,
-    pub nonce: u64,
-    pub amount: BigUint<M>,
-}
-
 #[derive(
   ManagedVecItem, NestedEncode, NestedDecode, TopEncode, TopDecode, Clone, TypeAbi, Default,
 )]
@@ -92,4 +85,13 @@ pub struct Reservation<M: ManagedTypeApi> {
 pub struct SubDomain<M: ManagedTypeApi> {
   pub name: ManagedBuffer<M>,
   pub address: ManagedAddress<M>
+}
+
+#[derive(TopEncode, TopDecode, TypeAbi, PartialEq, Eq, Clone, Copy, Debug)]
+pub enum PeriodType {
+    Year,
+    Month,
+    Day,
+    Hour,
+    Minute
 }

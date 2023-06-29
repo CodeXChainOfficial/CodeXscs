@@ -4,26 +4,6 @@ multiversx_sc::derive_imports!();
 #[multiversx_sc::module]
 pub trait CallbackModule: crate::storage_module::StorageModule {
   #[callback]
-  fn issue_callback(
-      &self,
-      #[call_result] result: ManagedAsyncCallResult<EgldOrEsdtTokenIdentifier>,
-  ) {
-    match result {
-      ManagedAsyncCallResult::Ok(token_id) => {
-          self.nft_token_id().set(&token_id.unwrap_esdt());
-      }
-      ManagedAsyncCallResult::Err(_) => {
-        let caller = self.blockchain().get_owner_address();
-        let returned = self.call_value().egld_or_single_esdt();
-        if returned.token_identifier.is_egld() && returned.amount > 0 {
-          self.send()
-            .direct(&caller, &returned.token_identifier, 0, &returned.amount);
-        }
-      }
-    }
-  }
-  
-  #[callback]
   fn fetch_egld_usd_prices_callback(&self, #[call_result] result: ManagedAsyncCallResult<u64>) {
     match result {
       ManagedAsyncCallResult::Ok(price) => {

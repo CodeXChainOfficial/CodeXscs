@@ -1,11 +1,9 @@
 #![no_std]
-#![allow(clippy::string_lit_as_bytes)]
-#![allow(clippy::ptr_arg)]
 
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
-use core::ops::Deref;
-// use crate::idna::{ToAscii, ToUnicode};
+
+use core::{ops::Deref, i16::MIN};
 
 pub mod callback_module;
 pub mod constant_module;
@@ -22,7 +20,7 @@ use constant_module::{
     DAY_IN_SECONDS, HOUR_IN_SECONDS, MIGRATION_PERIOD, MIN_IN_SECONDS, MONTH_IN_SECONDS,
     NFT_AMOUNT, SUB_DOMAIN_COST_IN_CENT, YEAR_IN_SECONDS,
 };
-use data_module::{DomainName, DomainNameAttributes, Reservation, SubDomain, Profile, SocialMedia, TextRecord, Wallets};
+use data_module::{DomainName, DomainNameAttributes, Reservation, SubDomain, Profile, SocialMedia, TextRecord, Wallets, PeriodType};
 
 /// A contract that registers and manages domain names issuance on MultiversX
 #[multiversx_sc::contract]
@@ -32,23 +30,25 @@ pub trait XnMain:
     + storage_module::StorageModule
     + utils_module::UtilsModule
     + price_oracle_module::PriceOracleModule
+    + multiversx_sc_modules::default_issue_callbacks::DefaultIssueCallbacksModule
 {
     #[init]
     fn init(&self, oracle_address: ManagedAddress) {
         // Set the oracle contract address
         self.oracle_address().set(&oracle_address);
 
-        let default_prices_in_usd_cents: [u64; 5] = [10000u64, 10000u64, 10000u64, 1000u64, 100];
-
-        for (_i, price) in default_prices_in_usd_cents.iter().enumerate() {
-            self.domain_length_to_yearly_rent_usd().push(&price);
-        }
+        //set default annual rental for domain name length in US cents
+        let default_rent_fees: [u64; 5] = 
+            [10_000u64, 10_000u64, 10_000u64, 1_000u64, 100];
+        self.rental_to_length().set(default_rent_fees);
 
         // set default EGLD/USD price
-        self._set_egld_price();
+        self.internal_set_egld_price();
         // self.egld_usd_price().set(268000000000000 as u64);
+
         // set default Migration start time.
         self.migration_start_time().set(self.get_current_time());
+
         // Initialize the allowed top-level domain names
         let tld_mvx = ManagedBuffer::from("mvx");
         self.allowed_top_level_domains().push(&tld_mvx);
@@ -56,46 +56,21 @@ pub trait XnMain:
 
     #[only_owner]
     #[payable("EGLD")]
-    #[endpoint]
-    fn issue_token(&self, token_name: ManagedBuffer, token_ticker: ManagedBuffer) {
-        require!(self.nft_token_id().is_empty(), "Token already issued");
-
-        let payment_amount = self.call_value().egld_value();
-        self.send()
-            .esdt_system_sc_proxy()
-            .issue_non_fungible(
-                payment_amount,
-                &token_name,
-                &token_ticker,
-                NonFungibleTokenProperties {
-                    can_freeze: true,
-                    can_wipe: true,
-                    can_pause: true,
-                    can_transfer_create_role: true,
-                    can_change_owner: false,
-                    can_upgrade: false,
-                    can_add_special_roles: true,
-                },
-            )
-            .async_call()
-            .with_callback(self.callbacks().issue_callback())
-            .call_and_exit();
-    }
-
-    #[only_owner]
-    #[endpoint(set_local_roles)]
-    fn set_local_roles(&self) {
-        require!(!self.nft_token_id().is_empty(), "Token not issued");
-
-        self.send()
-            .esdt_system_sc_proxy()
-            .set_special_roles(
-                &self.blockchain().get_sc_address(),
-                &self.nft_token_id().get(),
-                (&[EsdtLocalRole::NftCreate][..]).into_iter().cloned(),
-            )
-            .async_call()
-            .call_and_exit()
+    fn issue_and_set_all_roles(
+        &self,
+        token_display_name: ManagedBuffer,
+        token_ticker: ManagedBuffer,
+        num_decimals: usize,
+    ) {
+        let issue_cost = self.call_value().egld_value();
+        self.domain_nft().issue_and_set_all_roles(
+            EsdtTokenType::NonFungible,
+            issue_cost,
+            token_display_name,
+            token_ticker,
+            num_decimals,
+            None,
+        );
     }
 
     #[payable("EGLD")]
@@ -104,23 +79,11 @@ pub trait XnMain:
         &self,
         domain_name: ManagedBuffer,
         period: u8,
-        unit: u8, // 0: year, 1: month, 2: day, 3: hour, 4: min
+        unit: PeriodType,
         assign_to: OptionalValue<ManagedAddress>,
     ) {
         let (token, _, payment) = self.call_value().egld_or_single_esdt().into_tuple();
         let caller = self.blockchain().get_caller();
-        require!(period > 0, "Duration (years) must be a positive integer");
-
-        let unit_seconds = match unit {
-            0 => YEAR_IN_SECONDS,
-            1 => MONTH_IN_SECONDS,
-            2 => DAY_IN_SECONDS,
-            3 => HOUR_IN_SECONDS,
-            4 => MIN_IN_SECONDS,
-            _ => panic!("Wrong date unit"),
-        };
-
-        let period_secs: u64 = u64::from(period) * unit_seconds;
 
         let is_name_valid = self.is_name_valid(&domain_name);
         let is_name_valid_message = if is_name_valid.err().is_some() {
@@ -139,6 +102,9 @@ pub trait XnMain:
             "name is not available for caller"
         );
 
+        let secs = [YEAR_IN_SECONDS, MONTH_IN_SECONDS, DAY_IN_SECONDS, HOUR_IN_SECONDS, MIN_IN_SECONDS];
+        let period_secs: u64 = u64::from(period) * secs[unit as usize];
+
         let price = self.rent_price(&domain_name, &period_secs);
         require!(price <= payment, "Insufficient EGLD Funds");
 
@@ -148,8 +114,6 @@ pub trait XnMain:
 
         // NFT functionality
         if domain_record_exists {
-            // require!(self.domain_name(&domain_name).get().expires_at + GRACE_PERIOD < since, "Domain already exists.");
-            // require!(self.is_owner(&caller, &domain_name), "Permission denied.");
             let mut domain_record = self.domain_name(&domain_name).get();
             domain_record.expires_at = since + period_secs;
             self.domain_name(&domain_name).set(domain_record.clone());
@@ -223,7 +187,7 @@ pub trait XnMain:
             "Not Allowed!"
         );
 
-        self._update_primary_address(&domain_name_or_sub_domain, assign_to);
+        self.internal_update_primary_address(&domain_name_or_sub_domain, assign_to);
     }
 
     #[payable("EGLD")]
@@ -244,7 +208,7 @@ pub trait XnMain:
         }
 
         require!(!is_exist, "Already registered");
-        self._set_egld_price();
+        self.internal_set_egld_price();
         let egld_usd_price = self.egld_usd_price().get();
         let price_egld = BigUint::from(SUB_DOMAIN_COST_IN_CENT)
             * BigUint::from(10_000_000_000_000_000u64)
@@ -335,8 +299,8 @@ pub trait XnMain:
     #[payable("*")]
     #[endpoint]
     fn transfer_domain(&self, domain_name: ManagedBuffer, new_owner: ManagedAddress) {
-        let (token_id, token_nonce, amount) = self.call_value().egld_or_single_esdt().into_tuple();
-        let nft_token_id_mapper = self.nft_token_id();
+        let (token_id, token_nonce, _amount) = self.call_value().egld_or_single_esdt().into_tuple();
+        let nft_token_id_mapper = self.domain_nft();
         let domain_name_mapper = self.domain_name(&domain_name);
         let caller = self.blockchain().get_caller();
 
@@ -352,7 +316,7 @@ pub trait XnMain:
         require!(!nft_token_id_mapper.is_empty(), "Token not issued!");
 
         require!(
-            token_id == self.nft_token_id().get()
+            &token_id == self.domain_nft().get_token_id_ref()
                 && token_nonce == domain_name_mapper.get().nft_nonce,
             "wrong Nft"
         );
@@ -421,13 +385,15 @@ pub trait XnMain:
     #[endpoint]
     fn update_price_usd(&self, domain_length: u64, yearly_rent_usd: u64) {
         // Update the storage with the new price
-        self.domain_length_to_yearly_rent_usd()
-            .set(domain_length as usize, &yearly_rent_usd);
+        let mut fees = self.rental_to_length().get();
+        fees[domain_length as usize] = yearly_rent_usd;
+        self.rental_to_length()
+            .set(fees);
     }
 
     #[only_owner]
     #[endpoint]
     fn fetch_egld_usd_prices(&self) {
-        self._fetch_egld_usd_prices();
+        self.internal_fetch_egld_usd_prices();
     }
 }

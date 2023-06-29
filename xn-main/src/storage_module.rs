@@ -13,9 +13,10 @@ pub trait StorageModule {
       domain_name: &ManagedBuffer,
   ) -> SingleValueMapper<Reservation<Self::Api>>;
 
-  #[view(getNftTokenId)]
-  #[storage_mapper("nftTokenId")]
-  fn nft_token_id(&self) -> SingleValueMapper<TokenIdentifier>;
+  #[view(getDomainNFT)]
+  #[storage_mapper("domainNFT")]
+  fn domain_nft(&self) -> NonFungibleTokenMapper;
+
 
   #[view(get_accept_request)]
   #[storage_mapper("accept_request")]
@@ -48,7 +49,8 @@ pub trait StorageModule {
 
   #[view(get_prices_usd)]
   #[storage_mapper("prices_usd")]
-  fn domain_length_to_yearly_rent_usd(&self) -> VecMapper<u64>;
+  fn rental_to_length(&self) -> SingleValueMapper<[u64;5]>; 
+  //Annual rental for domain name length in US cents
 
   #[view(get_egld_usd_price)]
   #[storage_mapper("egld_usd_price")]

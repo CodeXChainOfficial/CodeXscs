@@ -26,7 +26,8 @@ pub trait NftModule:
         self.require_token_issued();
         require!(royalties <= ROYALTIES_MAX, "Royalties cannot exceed 100%");
 
-        let nft_token_id = self.nft_token_id().get();
+        let domain_nft = self.domain_nft();
+        let token_id = domain_nft.get_token_id_ref();
 
         let mut serialized_attributes = ManagedBuffer::new();
         if let core::result::Result::Err(err) = attributes.top_encode(&mut serialized_attributes) {
@@ -37,7 +38,7 @@ pub trait NftModule:
         let attributes_hash = attributes_sha256.as_managed_buffer();
         let uris = ManagedVec::from_single_item(uri);
         let nft_nonce = self.send().esdt_nft_create(
-            &nft_token_id,
+            &token_id,
             &BigUint::from(NFT_AMOUNT),
             &name,
             &royalties,
@@ -51,7 +52,7 @@ pub trait NftModule:
     }
 
     fn require_token_issued(&self) {
-        require!(!self.nft_token_id().is_empty(), "Token not issued");
+        require!(!self.domain_nft().is_empty(), "Token not issued");
     }
 
     // fn get_nft_nonce_from_domain_name(&self, domain_name: &ManagedBuffer) -> u64 {
@@ -60,9 +61,11 @@ pub trait NftModule:
     // }
 
     fn burn_nft(&self, nft_nonce: u64) {
-        let nft_token_id = self.nft_token_id().get();
+        let domain_nft = self.domain_nft();
+        let token_id = domain_nft.get_token_id_ref();
+
         self.send()
-            .esdt_local_burn(&nft_token_id, nft_nonce, &BigUint::from(NFT_AMOUNT));
+            .esdt_local_burn(token_id, nft_nonce, &BigUint::from(NFT_AMOUNT));
     }
 
     fn mint_nft(
@@ -72,7 +75,8 @@ pub trait NftModule:
         selling_price: &BigUint,
         attributes: &DomainNameAttributes,
     ) -> u64 {
-        let nft_token_id = self.nft_token_id().get();
+        let domain_nft = self.domain_nft();
+        let token_id = domain_nft.get_token_id_ref();
         let name = domain_name.clone();
         let royalties = BigUint::zero();
         let uri = ManagedBuffer::new();
@@ -91,7 +95,7 @@ pub trait NftModule:
 
         self.send().direct_esdt(
             new_owner,
-            &nft_token_id,
+            token_id,
             nft_nonce,
             &BigUint::from(NFT_AMOUNT),
         );
@@ -105,10 +109,12 @@ pub trait NftModule:
         nft_nonce: u64
     ) -> bool {
         self.require_token_issued();
-        let token_id = self.nft_token_id().get();
+        let domain_nft = self.domain_nft();
+        let token_id = domain_nft.get_token_id_ref();
+
         let balance = self.blockchain().get_esdt_balance(
             &owner,
-            &token_id,
+            token_id,
             nft_nonce
         );
 

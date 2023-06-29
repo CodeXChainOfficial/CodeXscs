@@ -130,24 +130,25 @@ pub trait UtilsModule:
 
   fn rent_price(&self, domain_name: &ManagedBuffer, secs: &u64) -> BigUint<Self::Api> {
     let len = domain_name.len();
-    let prices_len = self.domain_length_to_yearly_rent_usd().len();
+    let prices = self.rental_to_length().get();
+    let prices_len = prices.len();
     let price_index = if len < prices_len {
         len
     } else {
         prices_len - 1
     };
 
-    let yearly_price_usd = self.domain_length_to_yearly_rent_usd().get(price_index);
-    self._set_egld_price();
+    let annual_price_usd = prices[price_index];
+    self.internal_set_egld_price();
     let egld_usd_price = self.egld_usd_price().get();
 
-    let price_egld = BigUint::from(yearly_price_usd * u64::from(secs.clone()))
+    let price_egld = BigUint::from(annual_price_usd * u64::from(secs.clone()))
         * BigUint::from(egld_usd_price) / BigUint::from(YEAR_IN_SECONDS);
 
     price_egld
   }
 
-  fn _set_egld_price(
+  fn internal_set_egld_price(
     &self
 ) {
     let elgd_price = self.xexchange_pair_get_equivalent(
@@ -232,7 +233,7 @@ pub trait UtilsModule:
     return false;
   }
 
-  fn _update_primary_address(
+  fn internal_update_primary_address(
     &self,
     domain_name: &ManagedBuffer,
     assign_to: OptionalValue<ManagedAddress>,
@@ -245,14 +246,15 @@ pub trait UtilsModule:
     require!(is_owner, "Not owner");
     
     let domain_record = self.domain_name(&domain_name).get();
-    let token_id = self.nft_token_id().get();
+    let domain_nft = self.domain_nft();
+    let token_id = domain_nft.get_token_id_ref();
 
     match assign_to {
       OptionalValue::Some(address) => {
           if address != caller {
              self.send().direct_esdt(
               &address,
-              &token_id,
+              token_id,
               domain_record.nft_nonce,
               &BigUint::from(NFT_AMOUNT)
              );
@@ -262,7 +264,7 @@ pub trait UtilsModule:
     }
   }
 
-  fn _set_resolve_doamin(&self, domain_name: &ManagedBuffer, address: &ManagedAddress) {
+  fn internal_set_resolve_domain(&self, domain_name: &ManagedBuffer, address: &ManagedAddress) {
     self.user_builtin_proxy(address.clone())
       .set_user_name(domain_name.clone())
       .async_call()
@@ -273,7 +275,7 @@ pub trait UtilsModule:
       .call_and_exit();
   }
 
-  fn _fetch_egld_usd_prices(&self) {
+  fn internal_fetch_egld_usd_prices(&self) {
     let oracle_address = self.oracle_address().get();
     let mut args = ManagedVec::new();
     args.push(ManagedBuffer::from("egld"));
