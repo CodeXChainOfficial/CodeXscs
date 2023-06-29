@@ -92,20 +92,20 @@
                     "type": "bytes"
                 },
                 {
-                    "name": "avatar",
-                    "type": "bytes"
+                    "name": "profile",
+                    "type": "Profile"
                 },
                 {
-                    "name": "location",
-                    "type": "bytes"
+                    "name": "social_media",
+                    "type": "SocialMedia"
                 },
                 {
-                    "name": "website",
-                    "type": "bytes"
+                    "name": "text_record",
+                    "type": "List<TextRecord>"
                 },
                 {
-                    "name": "bio",
-                    "type": "bytes"
+                    "name": "wallets",
+                    "type": "Wallets"
                 }
             ],
             "outputs": []
@@ -323,21 +323,6 @@
             ]
         },
         {
-            "name": "get_primary_domain",
-            "mutability": "readonly",
-            "inputs": [
-                {
-                    "name": "address",
-                    "type": "Address"
-                }
-            ],
-            "outputs": [
-                {
-                    "type": "bytes"
-                }
-            ]
-        },
-        {
             "name": "get_owner_domain_name",
             "mutability": "readonly",
             "inputs": [
@@ -448,20 +433,45 @@
                     "type": "u64"
                 },
                 {
+                    "name": "profile",
+                    "type": "Option<Profile>"
+                },
+                {
+                    "name": "social_media",
+                    "type": "Option<SocialMedia>"
+                },
+                {
+                    "name": "text_record",
+                    "type": "Option<List<TextRecord>>"
+                },
+                {
+                    "name": "wallets",
+                    "type": "Option<Wallets>"
+                }
+            ]
+        },
+        "Profile": {
+            "type": "struct",
+            "fields": [
+                {
+                    "name": "name",
+                    "type": "bytes"
+                },
+                {
                     "name": "avatar",
-                    "type": "Option<bytes>"
+                    "type": "bytes"
                 },
                 {
                     "name": "location",
-                    "type": "Option<bytes>"
+                    "type": "bytes"
                 },
                 {
                     "name": "website",
-                    "type": "Option<bytes>"
+                    "type": "bytes"
                 },
                 {
-                    "name": "bio",
-                    "type": "Option<bytes>"
+                    "name": "shortbio",
+                    "type": "bytes"
                 }
             ]
         },
@@ -482,6 +492,35 @@
                 }
             ]
         },
+        "SocialMedia": {
+            "type": "struct",
+            "fields": [
+                {
+                    "name": "telegram",
+                    "type": "bytes"
+                },
+                {
+                    "name": "discord",
+                    "type": "bytes"
+                },
+                {
+                    "name": "twitter",
+                    "type": "bytes"
+                },
+                {
+                    "name": "medium",
+                    "type": "bytes"
+                },
+                {
+                    "name": "facebook",
+                    "type": "bytes"
+                },
+                {
+                    "name": "other_link",
+                    "type": "bytes"
+                }
+            ]
+        },
         "SubDomain": {
             "type": "struct",
             "fields": [
@@ -492,6 +531,36 @@
                 {
                     "name": "address",
                     "type": "Address"
+                }
+            ]
+        },
+        "TextRecord": {
+            "type": "struct",
+            "fields": [
+                {
+                    "name": "name_value",
+                    "type": "bytes"
+                },
+                {
+                    "name": "link",
+                    "type": "bytes"
+                }
+            ]
+        },
+        "Wallets": {
+            "type": "struct",
+            "fields": [
+                {
+                    "name": "egld",
+                    "type": "bytes"
+                },
+                {
+                    "name": "btc",
+                    "type": "bytes"
+                },
+                {
+                    "name": "eth",
+                    "type": "bytes"
                 }
             ]
         }

@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           27
+// Endpoints:                           26
 // Async Callback:                       1
-// Total number of exported functions:  29
+// Total number of exported functions:  28
 
 #![no_std]
 #![feature(alloc_error_handler, lang_items)]
@@ -37,7 +37,6 @@ multiversx_sc_wasm_adapter::endpoints! {
         get_accept_request
         get_domain_name
         get_sub_domains
-        get_primary_domain
         get_owner_domain_name
         resolve
         resolve_domain_name_key

@@ -22,7 +22,7 @@ use constant_module::{
     DAY_IN_SECONDS, HOUR_IN_SECONDS, MIGRATION_PERIOD, MIN_IN_SECONDS, MONTH_IN_SECONDS,
     NFT_AMOUNT, SUB_DOMAIN_COST_IN_CENT, YEAR_IN_SECONDS,
 };
-use data_module::{DomainName, DomainNameAttributes, Reservation, SubDomain};
+use data_module::{DomainName, DomainNameAttributes, Reservation, SubDomain, Profile, SocialMedia, TextRecord, Wallets};
 
 /// A contract that registers and manages domain names issuance on MultiversX
 #[multiversx_sc::contract]
@@ -171,10 +171,10 @@ pub trait XnMain:
                 name: domain_name.clone(),
                 expires_at: attributes.expires_at,
                 nft_nonce,
-                avatar: Option::None,
-                location: Option::None,
-                website: Option::None,
-                bio: Option::None,
+                profile: Option::None,
+                social_media: Option::None,
+                text_record: Option::None,
+                wallets: Option::None,
             };
 
             self.domain_name(&domain_name)
@@ -191,7 +191,7 @@ pub trait XnMain:
     }
 
     #[endpoint]
-    fn update_domain_profile(&self, domain_name: ManagedBuffer, avatar: ManagedBuffer, location: ManagedBuffer, website: ManagedBuffer, bio: ManagedBuffer) {
+    fn update_domain_profile(&self, domain_name: ManagedBuffer, profile: Profile<Self::Api>, social_media: SocialMedia<Self::Api>, text_record: ManagedVec<TextRecord<Self::Api>>, wallets: Wallets<Self::Api>) {
         let domain_record_exists = !self.domain_name(&domain_name).is_empty();
         require!(domain_record_exists, "Domain not exist");
 
@@ -203,10 +203,10 @@ pub trait XnMain:
         );
 
         let mut domain = self.domain_name(&domain_name).get();
-        domain.avatar = Some(avatar);
-        domain.location = Some(location);
-        domain.website = Some(website);
-        domain.bio = Some(bio);
+        domain.profile = Some(profile);
+        domain.social_media = Some(social_media);
+        domain.text_record = Some(text_record);
+        domain.wallets = Some(wallets);
         self.domain_name(&domain_name).set(&domain);
     }
 
@@ -262,6 +262,49 @@ pub trait XnMain:
         }
     }
 
+    // #[endpoint]
+    // fn migrate_domain(&self, domain_name: ManagedBuffer) {
+    //     let caller = self.blockchain().get_caller();
+
+    //     let migration_start_time = self.migration_start_time().get();
+    //     let current_time = self.get_current_time();
+    //     require!(
+    //         current_time < migration_start_time + MIGRATION_PERIOD,
+    //         "Period exceeded for migration"
+    //     );
+    //     // no subdomains
+    //     let parts = self.split_domain_name(&domain_name);
+    //     require!(parts.len() == 2, "You can only register domain names");
+    //     let mut new_domain_name: ManagedBuffer = parts.get(0).deref().clone();
+    //     new_domain_name.append(&ManagedBuffer::from(".mvx"));
+    //     let domain_record_exists = !self.domain_name(&new_domain_name).is_empty();
+    //     require!(!domain_record_exists, "Domain already migrated.");
+
+    //     // // Mint NFT for the new owner
+    //     let attributes = DomainNameAttributes {
+    //         expires_at: self.get_current_time() + YEAR_IN_SECONDS,
+    //     };
+    //     let nft_nonce = self.mint_nft(
+    //         &caller,
+    //         &new_domain_name,
+    //         &BigUint::from(0 as u64),
+    //         &attributes,
+    //     );
+    //     let new_domain_record = DomainName {
+    //         name: new_domain_name.clone(),
+    //         expires_at: attributes.expires_at,
+    //         nft_nonce,
+    //         profile: Option::None,
+    //         social_media: Option::None,
+    //         text_record: Option::None,
+    //         wallets: Option::None,
+    //     };
+
+    //     self.domain_name(&new_domain_name)
+    //         .set(new_domain_record.clone());
+    //     self.reservations(&new_domain_name).clear();
+    // }
+
     #[endpoint]
     fn migrate_domain(&self, domain_name: ManagedBuffer) {
         let caller = self.blockchain().get_caller();
@@ -297,10 +340,10 @@ pub trait XnMain:
             name: new_domain_name.clone(),
             expires_at: attributes.expires_at,
             nft_nonce,
-            avatar: Option::None,
-            location: Option::None,
-            website: Option::None,
-            bio: Option::None,
+            profile: Option::None,
+            social_media: Option::None,
+            text_record: Option::None,
+            wallets: Option::None,
         };
 
         self.domain_name(&new_domain_name)
