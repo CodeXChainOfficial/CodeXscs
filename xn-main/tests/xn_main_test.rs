@@ -185,6 +185,107 @@ fn register_or_renew_test() {
   // );
 }
 
+#[test]
+fn update_profile() {
+  let mut contract_setup = setup_contract(xn_main::contract_obj);
+  let b_wrapper = &mut contract_setup.blockchain_wrapper;
+  let user_addr = &contract_setup.first_user_address;
+  let DEFAULT_USD_TO_EGLD = rust_biguint!(USD_TO_EGLD);
+  let block_timestamp: u64 = 1000;
+  let mut global_token_id: &[u8] = &[];
+  let mut global_nounce: u64 = 0;
+  
+  b_wrapper.set_block_timestamp(block_timestamp);
+
+  b_wrapper
+    .execute_tx(
+      user_addr,
+      &contract_setup.contract_wrapper,
+      &(rust_biguint!(100_000) * DEFAULT_USD_TO_EGLD.clone()),
+      |sc| {
+        let domain_name = managed_buffer!(b"first.mvx");
+        let period: u8 = 1;
+        let unit: u8 = 0;
+        let token_name = managed_buffer!(TOKEN_NAME);
+        let token_ticker = managed_buffer!(TOKEN_TICKER);
+        let mut is_empty = sc.nft_token_id().is_empty();
+        assert_eq!(is_empty, true);
+        sc.issue_token(
+          token_name.clone(),
+          token_ticker.clone()
+        );
+        is_empty = sc.nft_token_id().is_empty();
+        assert_eq!(is_empty, false);
+        let token_id = sc.nft_token_id().get();
+        // global_token_id = token_id.to_boxed_bytes().as_slice();
+        sc.register_or_renew(
+          domain_name.clone(),
+          period,
+          unit,
+          None.into()
+        );
+
+        let empty_domain_record = sc.domain_name(&domain_name).is_empty();
+        // check if domain_record with domain_name exists
+        assert_eq!(empty_domain_record, false);
+        let domain_record = sc.domain_name(&domain_name).get();
+        // check saved values of domain_record with inputs
+        assert_eq!(domain_record.name.parse_as_u64().unwrap(), domain_name.parse_as_u64().unwrap());
+        assert_eq!(domain_record.expires_at, block_timestamp + period as u64 * YEAR_IN_SECONDS);
+        global_nounce = domain_record.nft_nonce.clone();
+        let domain_owner = sc.owner_domain_name(&domain_name).get();
+        // check if domain owner is first user
+        assert_eq!(domain_owner.to_address(), *user_addr);
+
+        // let mut reservations = ManagedVec::new();
+        // reservations.push(Reservation::<DebugApi> {
+        //   domain_name: first_old_domain_name.clone(),
+        //   until: first_old_domain_until.clone(),
+        //   reserved_for: managed_first_user
+        // });
+        let profile = Profile::<DebugApi> {
+          name: managed_buffer!(b"name"),
+          avatar: managed_buffer!(b"avatar"),
+          location: managed_buffer!(b"location"),
+          website: managed_buffer!(b"website"),
+          shortbio: managed_buffer!(b"shortbio"),
+        };
+
+        let social_media = SocialMedia::<DebugApi>{
+          telegram: managed_buffer!(b"name"),
+          discord: managed_buffer!(b"name"),
+          twitter: managed_buffer!(b"name"),
+          medium: managed_buffer!(b"name"),
+          facebook: managed_buffer!(b"name"),
+          other_link: managed_buffer!(b"name"),
+        };
+
+        let mut text_record = ManagedVec::new();
+        text_record.push(TextRecord::<DebugApi> {
+          name_value: managed_buffer!(b"name"),
+          link: managed_buffer!(b"name"),
+        });
+
+        let wallets = Wallets::<DebugApi>{
+          egld: managed_buffer!(b"name"),
+          btc: managed_buffer!(b"name"),
+          eth: managed_buffer!(b"name"),
+        };
+        sc.update_domain_profile(domain_name, profile, social_media, text_record, wallets )
+      },
+    )
+    .assert_ok();
+  
+  // check NFT balance
+  // b_wrapper.check_nft_balance::<Empty>(
+  //   user_addr,
+  //   global_token_id,
+  //   global_nounce,
+  //   &rust_biguint!(0),
+  //   None,
+  // );
+}
+
 // /*
 // test for gift
 // */

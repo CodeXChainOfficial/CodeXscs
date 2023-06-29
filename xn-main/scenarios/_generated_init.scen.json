@@ -1,0 +1,111 @@
+{
+    "steps": [
+        {
+            "step": "setState",
+            "accounts": {
+                "0x66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "developerRewards": "0"
+                }
+            }
+        },
+        {
+            "step": "setState",
+            "accounts": {
+                "0x2b32db6c2c0a6235fb1397e8225ea85e0f0e6e8c7b126d0016ccbde0e667151e": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "developerRewards": "0"
+                }
+            }
+        },
+        {
+            "step": "setState",
+            "accounts": {
+                "0x12771355e46cd47c71ed1721fd5319b383cca3a1f9fce3aa1c8cd3bd37af20d7": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "developerRewards": "0"
+                }
+            }
+        },
+        {
+            "step": "setState",
+            "accounts": {
+                "0xfe15c0d3ebe314fad720a08b839a004c2e6386f5aecc19ec74807d1920cb6aeb": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "developerRewards": "0"
+                }
+            }
+        },
+        {
+            "step": "setState",
+            "accounts": {
+                "0x0000000000000000aaddb418ccb49b5426d5c2504f526f7766580f6e45984e3b": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "code": "file:../output/xn-main.wasm",
+                    "owner": "0x66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925",
+                    "developerRewards": "0"
+                }
+            }
+        },
+        {
+            "step": "setState",
+            "accounts": {
+                "0x66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925": {
+                    "nonce": "0",
+                    "balance": "26800000000000000000000",
+                    "developerRewards": "0"
+                }
+            }
+        },
+        {
+            "step": "setState",
+            "accounts": {
+                "0x12771355e46cd47c71ed1721fd5319b383cca3a1f9fce3aa1c8cd3bd37af20d7": {
+                    "nonce": "0",
+                    "balance": "26800000000000000000000",
+                    "developerRewards": "0"
+                }
+            }
+        },
+        {
+            "step": "setState",
+            "accounts": {
+                "0xfe15c0d3ebe314fad720a08b839a004c2e6386f5aecc19ec74807d1920cb6aeb": {
+                    "nonce": "0",
+                    "balance": "26800000000000000000000",
+                    "developerRewards": "0"
+                }
+            }
+        },
+        {
+            "step": "setState",
+            "accounts": {
+                "0x0000000000000000aaddb418ccb49b5426d5c2504f526f7766580f6e45984e3b": {
+                    "nonce": "0",
+                    "balance": "0",
+                    "storage": {
+                        "str:allowed_top_level_domains.item\u0000\u0000\u0000\u0001": "0x6d7678",
+                        "str:allowed_top_level_domains.len": "0x01",
+                        "str:egld_usd_price": "0xf3be9cccc000",
+                        "str:migration_start_time": "0x",
+                        "str:oracle_address": "0x2b32db6c2c0a6235fb1397e8225ea85e0f0e6e8c7b126d0016ccbde0e667151e",
+                        "str:prices_usd.item\u0000\u0000\u0000\u0001": "0x2710",
+                        "str:prices_usd.item\u0000\u0000\u0000\u0002": "0x2710",
+                        "str:prices_usd.item\u0000\u0000\u0000\u0003": "0x2710",
+                        "str:prices_usd.item\u0000\u0000\u0000\u0004": "0x03e8",
+                        "str:prices_usd.item\u0000\u0000\u0000\u0005": "0x64",
+                        "str:prices_usd.len": "0x05"
+                    },
+                    "code": "file:../output/xn-main.wasm",
+                    "owner": "0x66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925",
+                    "developerRewards": "0"
+                }
+            }
+        }
+    ]
+}

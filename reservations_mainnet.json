@@ -1,0 +1,197 @@
+{
+    "took": 7,
+    "timed_out": false,
+    "_shards": {
+        "total": 3,
+        "successful": 3,
+        "skipped": 0,
+        "failed": 0
+    },
+    "hits": {
+        "total": {
+            "value": 10000,
+            "relation": "gte"
+        },
+        "max_score": 1.0,
+        "hits": [
+            {
+                "_index": "accounts-000001",
+                "_type": "_doc",
+                "_id": "erd19l6v2cjcguuy07fgvrd3tgx4k4esc0fsnfznrtkhy6ltcg7xm7kq34knvf",
+                "_score": 1.0,
+                "_source": {
+                    "address": "erd19l6v2cjcguuy07fgvrd3tgx4k4esc0fsnfznrtkhy6ltcg7xm7kq34knvf",
+                    "totalBalanceWithStakeNum": 0.2592557477,
+                    "balance": "259255747652370369",
+                    "balanceNum": 0.2592557477,
+                    "developerRewards": "0",
+                    "totalBalanceWithStake": "259255747652370369",
+                    "shardID": 0,
+                    "userName": "gsscorp.elrond",
+                    "nonce": 38,
+                    "timestamp": 1676387106
+                }
+            },
+            {
+                "_index": "accounts-000001",
+                "_type": "_doc",
+                "_id": "erd14mn3a4n5u48aun6myvw7pcm8fjed3ue83c6gw6t48hcuv5d7xf9swsfg72",
+                "_score": 1.0,
+                "_source": {
+                    "address": "erd14mn3a4n5u48aun6myvw7pcm8fjed3ue83c6gw6t48hcuv5d7xf9swsfg72",
+                    "totalBalanceWithStakeNum": 8.77735E-4,
+                    "balance": "877735000000000",
+                    "balanceNum": 8.77735E-4,
+                    "developerRewards": "0",
+                    "totalBalanceWithStake": "877735000000000",
+                    "shardID": 1,
+                    "userName": "princedelabun.elrond",
+                    "nonce": 1,
+                    "timestamp": 1676336706
+                }
+            },
+            {
+                "_index": "accounts-000001",
+                "_type": "_doc",
+                "_id": "erd1c0rtcl3uch39psp0spa0fjn3tl23emgum4ph30pwxgy77wtjyy9smjuw5m",
+                "_score": 1.0,
+                "_source": {
+                    "address": "erd1c0rtcl3uch39psp0spa0fjn3tl23emgum4ph30pwxgy77wtjyy9smjuw5m",
+                    "totalBalanceWithStakeNum": 1.3602149576,
+                    "balance": "1360214957563955155",
+                    "balanceNum": 1.3602149576,
+                    "developerRewards": "0",
+                    "totalBalanceWithStake": "1360214957563955155",
+                    "shardID": 1,
+                    "userName": "andrewwarb.elrond",
+                    "nonce": 206,
+                    "timestamp": 1676392740
+                }
+            },
+            {
+                "_index": "accounts-000001",
+                "_type": "_doc",
+                "_id": "erd1xlwvzks7x8qq3ecx2tru3a05xp0e5pytrteelsj9pfu9wavlfxjqa6yna0",
+                "_score": 1.0,
+                "_source": {
+                    "address": "erd1xlwvzks7x8qq3ecx2tru3a05xp0e5pytrteelsj9pfu9wavlfxjqa6yna0",
+                    "balance": "0",
+                    "balanceNum": 0,
+                    "developerRewards": "0",
+                    "totalBalanceWithStake": "0",
+                    "shardID": 0,
+                    "userName": "bitjurnal.elrond",
+                    "nonce": 8,
+                    "timestamp": 1676372982
+                }
+            },
+            {
+                "_index": "accounts-000001",
+                "_type": "_doc",
+                "_id": "erd173q7gst7flqx9nlqp7qpcftpe5272e8swa2pe2qnxj7cxk9v6m4q3l3afp",
+                "_score": 1.0,
+                "_source": {
+                    "address": "erd173q7gst7flqx9nlqp7qpcftpe5272e8swa2pe2qnxj7cxk9v6m4q3l3afp",
+                    "totalBalanceWithStakeNum": 0.3241175466,
+                    "balance": "324117546553190419",
+                    "balanceNum": 0.3241175466,
+                    "developerRewards": "0",
+                    "totalBalanceWithStake": "324117546553190419",
+                    "shardID": 2,
+                    "userName": "ionela33.elrond",
+                    "nonce": 189,
+                    "timestamp": 1676358108
+                }
+            },
+            {
+                "_index": "accounts-000001",
+                "_type": "_doc",
+                "_id": "erd1hkzhn5ekxjmjeulg4zgn5wxt32zmtn36ykf89d9nl0sm6er3lalqkrpnwu",
+                "_score": 1.0,
+                "_source": {
+                    "address": "erd1hkzhn5ekxjmjeulg4zgn5wxt32zmtn36ykf89d9nl0sm6er3lalqkrpnwu",
+                    "totalBalanceWithStakeNum": 0.0685162943,
+                    "balance": "68516294308205511",
+                    "balanceNum": 0.0685162943,
+                    "developerRewards": "0",
+                    "totalBalanceWithStake": "68516294308205511",
+                    "shardID": 2,
+                    "userName": "tyel2.elrond",
+                    "nonce": 44,
+                    "timestamp": 1676332434
+                }
+            },
+            {
+                "_index": "accounts-000001",
+                "_type": "_doc",
+                "_id": "erd1xfqh0tlvzxdgunvvgllau5azmtyrq9txl9nce2u9cnla6kaluussus6nza",
+                "_score": 1.0,
+                "_source": {
+                    "address": "erd1xfqh0tlvzxdgunvvgllau5azmtyrq9txl9nce2u9cnla6kaluussus6nza",
+                    "balance": "0",
+                    "balanceNum": 0,
+                    "developerRewards": "0",
+                    "totalBalanceWithStake": "0",
+                    "shardID": 1,
+                    "userName": "dhika02.elrond",
+                    "nonce": 4,
+                    "timestamp": 1676348544
+                }
+            },
+            {
+                "_index": "accounts-000001",
+                "_type": "_doc",
+                "_id": "erd1hc2z94pqtf7sfawnfssdc3ujutpcfhwsgrd8gw72clde9pthn0asrs2czu",
+                "_score": 1.0,
+                "_source": {
+                    "address": "erd1hc2z94pqtf7sfawnfssdc3ujutpcfhwsgrd8gw72clde9pthn0asrs2czu",
+                    "totalBalanceWithStakeNum": 1.164995E-4,
+                    "balance": "116499455016579",
+                    "balanceNum": 1.164995E-4,
+                    "developerRewards": "0",
+                    "totalBalanceWithStake": "116499455016579",
+                    "shardID": 1,
+                    "userName": "ciardel.elrond",
+                    "nonce": 153,
+                    "timestamp": 1676381034
+                }
+            },
+            {
+                "_index": "accounts-000001",
+                "_type": "_doc",
+                "_id": "erd1zea8s6wrg73wnh8r6r4g3wzskxf8n2da6qepxmcntfcytnvuc7csz5glrr",
+                "_score": 1.0,
+                "_source": {
+                    "address": "erd1zea8s6wrg73wnh8r6r4g3wzskxf8n2da6qepxmcntfcytnvuc7csz5glrr",
+                    "totalBalanceWithStakeNum": 0.0161179359,
+                    "balance": "16117935930000000",
+                    "balanceNum": 0.0161179359,
+                    "developerRewards": "0",
+                    "totalBalanceWithStake": "16117935930000000",
+                    "shardID": 1,
+                    "userName": "abirmoon9.elrond",
+                    "nonce": 7,
+                    "timestamp": 1676324058
+                }
+            },
+            {
+                "_index": "accounts-000001",
+                "_type": "_doc",
+                "_id": "erd18hmaautn420w8wcvzjleqw36d6zxnnrn0sv4cugvxtm2sdcaslpqyq738e",
+                "_score": 1.0,
+                "_source": {
+                    "address": "erd18hmaautn420w8wcvzjleqw36d6zxnnrn0sv4cugvxtm2sdcaslpqyq738e",
+                    "totalBalanceWithStakeNum": 0.5159014071,
+                    "balance": "515901407098722048",
+                    "balanceNum": 0.5159014071,
+                    "developerRewards": "0",
+                    "totalBalanceWithStake": "515901407098722048",
+                    "shardID": 2,
+                    "userName": "2ny.elrond",
+                    "nonce": 71,
+                    "timestamp": 1676321172
+                }
+            }
+        ]
+    }
+}

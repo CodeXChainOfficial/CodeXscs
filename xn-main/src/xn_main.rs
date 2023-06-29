@@ -262,49 +262,6 @@ pub trait XnMain:
         }
     }
 
-    // #[endpoint]
-    // fn migrate_domain(&self, domain_name: ManagedBuffer) {
-    //     let caller = self.blockchain().get_caller();
-
-    //     let migration_start_time = self.migration_start_time().get();
-    //     let current_time = self.get_current_time();
-    //     require!(
-    //         current_time < migration_start_time + MIGRATION_PERIOD,
-    //         "Period exceeded for migration"
-    //     );
-    //     // no subdomains
-    //     let parts = self.split_domain_name(&domain_name);
-    //     require!(parts.len() == 2, "You can only register domain names");
-    //     let mut new_domain_name: ManagedBuffer = parts.get(0).deref().clone();
-    //     new_domain_name.append(&ManagedBuffer::from(".mvx"));
-    //     let domain_record_exists = !self.domain_name(&new_domain_name).is_empty();
-    //     require!(!domain_record_exists, "Domain already migrated.");
-
-    //     // // Mint NFT for the new owner
-    //     let attributes = DomainNameAttributes {
-    //         expires_at: self.get_current_time() + YEAR_IN_SECONDS,
-    //     };
-    //     let nft_nonce = self.mint_nft(
-    //         &caller,
-    //         &new_domain_name,
-    //         &BigUint::from(0 as u64),
-    //         &attributes,
-    //     );
-    //     let new_domain_record = DomainName {
-    //         name: new_domain_name.clone(),
-    //         expires_at: attributes.expires_at,
-    //         nft_nonce,
-    //         profile: Option::None,
-    //         social_media: Option::None,
-    //         text_record: Option::None,
-    //         wallets: Option::None,
-    //     };
-
-    //     self.domain_name(&new_domain_name)
-    //         .set(new_domain_record.clone());
-    //     self.reservations(&new_domain_name).clear();
-    // }
-
     #[endpoint]
     fn migrate_domain(&self, domain_name: ManagedBuffer) {
         let caller = self.blockchain().get_caller();

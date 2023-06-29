@@ -1,11 +1,11 @@
 {
     "buildInfo": {
         "rustc": {
-            "version": "1.69.0-nightly",
-            "commitHash": "5e37043d63bfe2f3be8fa5a05b07d6c0dad5775d",
-            "commitDate": "2023-01-22",
+            "version": "1.72.0-nightly",
+            "commitHash": "5bd28f5eac1ba3569bfa8d49ec3f5acbdfdff7a0",
+            "commitDate": "2023-06-28",
             "channel": "Nightly",
-            "short": "rustc 1.69.0-nightly (5e37043d6 2023-01-22)"
+            "short": "rustc 1.72.0-nightly (5bd28f5ea 2023-06-28)"
         },
         "contractCrate": {
             "name": "xn-main",
