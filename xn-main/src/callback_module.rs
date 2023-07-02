@@ -10,8 +10,6 @@ pub trait CallbackModule: crate::storage_module::StorageModule {
         self.egld_usd_price().set(price);
       }
       ManagedAsyncCallResult::Err(_) => {
-        // this can only fail if the oracle contract address is invalid
-        // nothing to revert in case of error
       }
     }
   }
@@ -30,18 +28,19 @@ pub trait CallbackModule: crate::storage_module::StorageModule {
       ManagedAsyncCallResult::Err(_) => {}
     }
   }
-  
+
   #[callback]
-  fn del_user_name_callback(
-    &self,
-    domain_name: &ManagedBuffer,
-    #[call_result] result: ManagedAsyncCallResult<()>,
-  ) {
+  fn xexchange_callback(&self, #[call_result] result: ManagedAsyncCallResult<BigUint>) {
     match result {
-      ManagedAsyncCallResult::Ok(()) => {
-        self.resolve_domain_name(&domain_name).clear();
+      ManagedAsyncCallResult::Ok(amount_out) => {
+        if amount_out.to_u64().is_some() {
+          self.egld_usd_price().set(amount_out.to_u64().unwrap());
+        }
       }
-      ManagedAsyncCallResult::Err(_) => {}
+      ManagedAsyncCallResult::Err(_) => {
+        // this can only fail if the oracle contract address is invalid
+        // nothing to revert in case of error
+      }
     }
   }
 }

@@ -47,7 +47,7 @@
                 },
                 {
                     "name": "unit",
-                    "type": "u8"
+                    "type": "PeriodType"
                 },
                 {
                     "name": "assign_to",
@@ -58,7 +58,7 @@
             "outputs": []
         },
         {
-            "name": "update_domain_profile",
+            "name": "update_domain_profile_overview",
             "mutability": "mutable",
             "inputs": [
                 {
@@ -68,14 +68,47 @@
                 {
                     "name": "profile",
                     "type": "Profile"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "update_domain_profile_socialmedia",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "domain_name",
+                    "type": "bytes"
                 },
                 {
                     "name": "social_media",
                     "type": "SocialMedia"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "update_domain_profile_textrecord",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "domain_name",
+                    "type": "bytes"
                 },
                 {
                     "name": "text_record",
                     "type": "List<TextRecord>"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "update_domain_profile_wallets",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "domain_name",
+                    "type": "bytes"
                 },
                 {
                     "name": "wallets",
@@ -174,6 +207,10 @@
                 {
                     "name": "sub_domain_name",
                     "type": "bytes"
+                },
+                {
+                    "name": "address",
+                    "type": "Address"
                 }
             ],
             "outputs": []
@@ -241,7 +278,7 @@
             ]
         },
         {
-            "name": "getDomainNFT",
+            "name": "get_domain_nft",
             "mutability": "readonly",
             "inputs": [],
             "outputs": [
@@ -385,6 +422,16 @@
                     "type": "u64"
                 }
             ]
+        },
+        {
+            "name": "get_royalties",
+            "mutability": "readonly",
+            "inputs": [],
+            "outputs": [
+                {
+                    "type": "u64"
+                }
+            ]
         }
     ],
     "events": [],
@@ -420,6 +467,31 @@
                 {
                     "name": "wallets",
                     "type": "Option<Wallets>"
+                }
+            ]
+        },
+        "PeriodType": {
+            "type": "enum",
+            "variants": [
+                {
+                    "name": "Year",
+                    "discriminant": 0
+                },
+                {
+                    "name": "Month",
+                    "discriminant": 1
+                },
+                {
+                    "name": "Day",
+                    "discriminant": 2
+                },
+                {
+                    "name": "Hour",
+                    "discriminant": 3
+                },
+                {
+                    "name": "Minute",
+                    "discriminant": 4
                 }
             ]
         },

@@ -10,8 +10,6 @@ const ROYALTIES_MAX: u32 = 10_000; // 100%
 pub trait NftModule: 
     crate::callback_module::CallbackModule 
     + crate::storage_module::StorageModule {
-    // private
-
     #[allow(clippy::too_many_arguments)]
     fn create_nft_with_attributes<T: TopEncode>(
         &self,
@@ -48,17 +46,11 @@ pub trait NftModule:
         );
 
         nft_nonce
-        // 1u64
     }
 
     fn require_token_issued(&self) {
         require!(!self.domain_nft().is_empty(), "Token not issued");
     }
-
-    // fn get_nft_nonce_from_domain_name(&self, domain_name: &ManagedBuffer) -> u64 {
-    //     // Compute a nonce based on the domain name.
-    //     self.crypto().sha256(domain_name).into()
-    // }
 
     fn burn_nft(&self, nft_nonce: u64) {
         let domain_nft = self.domain_nft();
@@ -78,7 +70,7 @@ pub trait NftModule:
         let domain_nft = self.domain_nft();
         let token_id = domain_nft.get_token_id_ref();
         let name = domain_name.clone();
-        let royalties = BigUint::zero();
+        let royalties = BigUint::from(self.royalties().get());
         let uri = ManagedBuffer::new();
         let token_used_as_payment = EgldOrEsdtTokenIdentifier::egld();
         let token_used_as_payment_nonce = 0;

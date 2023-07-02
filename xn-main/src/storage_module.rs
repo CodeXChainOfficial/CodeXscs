@@ -5,7 +5,6 @@ use crate::data_module::*;
 
 #[multiversx_sc::module]
 pub trait StorageModule {
-  // storage
   #[view(get_reservation)]
   #[storage_mapper("reservations")]
     fn reservations(
@@ -13,10 +12,9 @@ pub trait StorageModule {
       domain_name: &ManagedBuffer,
   ) -> SingleValueMapper<Reservation<Self::Api>>;
 
-  #[view(getDomainNFT)]
+  #[view(get_domain_nft)]
   #[storage_mapper("domainNFT")]
   fn domain_nft(&self) -> NonFungibleTokenMapper;
-
 
   #[view(get_accept_request)]
   #[storage_mapper("accept_request")]
@@ -28,7 +26,7 @@ pub trait StorageModule {
 
   #[view(get_sub_domains)]
   #[storage_mapper("sub_domains")]
-  fn sub_domains(&self, domain_name: &ManagedBuffer) -> VecMapper<SubDomain<Self::Api>>;
+  fn sub_domains(&self, domain_name: &ManagedBuffer) -> UnorderedSetMapper<SubDomain<Self::Api>>;
 
   #[view(get_owner_domain_name)]
   #[storage_mapper("owner_domain_name")]
@@ -50,7 +48,6 @@ pub trait StorageModule {
   #[view(get_prices_usd)]
   #[storage_mapper("prices_usd")]
   fn rental_to_length(&self) -> SingleValueMapper<[u64;5]>; 
-  //Annual rental for domain name length in US cents
 
   #[view(get_egld_usd_price)]
   #[storage_mapper("egld_usd_price")]
@@ -66,4 +63,9 @@ pub trait StorageModule {
   #[view(get_migration_start_time)]
   #[storage_mapper("migration_start_time")]
   fn migration_start_time(&self) -> SingleValueMapper<u64>;
+
+  #[view(get_royalties)]
+  #[storage_mapper("get_royalties")]
+  fn royalties(&self) -> SingleValueMapper<u64>;
+
 }

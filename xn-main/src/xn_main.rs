@@ -3,7 +3,7 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
-use core::{ops::Deref, i16::MIN};
+use core::{i16::MIN, ops::Deref};
 
 pub mod callback_module;
 pub mod constant_module;
@@ -18,9 +18,12 @@ use callback_module::*;
 
 use constant_module::{
     DAY_IN_SECONDS, HOUR_IN_SECONDS, MIGRATION_PERIOD, MIN_IN_SECONDS, MONTH_IN_SECONDS,
-    NFT_AMOUNT, SUB_DOMAIN_COST_IN_CENT, YEAR_IN_SECONDS,
+    NFT_AMOUNT, SUB_DOMAIN_COST_USD, YEAR_IN_SECONDS,
 };
-use data_module::{DomainName, DomainNameAttributes, Reservation, SubDomain, Profile, SocialMedia, TextRecord, Wallets, PeriodType};
+use data_module::{
+    DomainName, DomainNameAttributes, PeriodType, Profile, Reservation, SocialMedia, SubDomain,
+    TextRecord, Wallets,
+};
 
 /// A contract that registers and manages domain names issuance on MultiversX
 #[multiversx_sc::contract]
@@ -38,13 +41,15 @@ pub trait XnMain:
         self.oracle_address().set(&oracle_address);
 
         //set default annual rental for domain name length in US cents
-        let default_rent_fees: [u64; 5] = 
-            [10_000u64, 10_000u64, 10_000u64, 1_000u64, 100];
+        let default_rent_fees: [u64; 5] = [10_000u64, 10_000u64, 10_000u64, 1_000u64, 100];
         self.rental_to_length().set(default_rent_fees);
 
         // set default EGLD/USD price
         self.internal_set_egld_price();
         // self.egld_usd_price().set(268000000000000 as u64);
+
+        // set default royalties
+        self.royalties().set(0);
 
         // set default Migration start time.
         self.migration_start_time().set(self.get_current_time());
@@ -102,7 +107,13 @@ pub trait XnMain:
             "name is not available for caller"
         );
 
-        let secs = [YEAR_IN_SECONDS, MONTH_IN_SECONDS, DAY_IN_SECONDS, HOUR_IN_SECONDS, MIN_IN_SECONDS];
+        let secs = [
+            YEAR_IN_SECONDS,
+            MONTH_IN_SECONDS,
+            DAY_IN_SECONDS,
+            HOUR_IN_SECONDS,
+            MIN_IN_SECONDS,
+        ];
         let period_secs: u64 = u64::from(period) * secs[unit as usize];
 
         let price = self.rent_price(&domain_name, &period_secs);
@@ -155,21 +166,73 @@ pub trait XnMain:
     }
 
     #[endpoint]
-    fn update_domain_profile(&self, domain_name: ManagedBuffer, profile: Profile<Self::Api>, social_media: SocialMedia<Self::Api>, text_record: ManagedVec<TextRecord<Self::Api>>, wallets: Wallets<Self::Api>) {
+    fn update_domain_profile_overview(
+        &self,
+        domain_name: ManagedBuffer,
+        profile: Profile<Self::Api>
+    ) {
         let domain_record_exists = !self.domain_name(&domain_name).is_empty();
         require!(domain_record_exists, "Domain not exist");
 
         let caller = self.blockchain().get_caller();
 
-        require!(
-            self.is_owner(&caller, &domain_name),
-            "Not Allowed!"
-        );
+        require!(self.is_owner(&caller, &domain_name), "Not Allowed!");
 
         let mut domain = self.domain_name(&domain_name).get();
         domain.profile = Some(profile);
+        self.domain_name(&domain_name).set(&domain);
+    }
+
+    #[endpoint]
+    fn update_domain_profile_socialmedia(
+        &self,
+        domain_name: ManagedBuffer,
+        social_media: SocialMedia<Self::Api>,
+    ) {
+        let domain_record_exists = !self.domain_name(&domain_name).is_empty();
+        require!(domain_record_exists, "Domain not exist");
+
+        let caller = self.blockchain().get_caller();
+
+        require!(self.is_owner(&caller, &domain_name), "Not Allowed!");
+
+        let mut domain = self.domain_name(&domain_name).get();
         domain.social_media = Some(social_media);
+        self.domain_name(&domain_name).set(&domain);
+    }
+
+    #[endpoint]
+    fn update_domain_profile_textrecord(
+        &self,
+        domain_name: ManagedBuffer,
+        text_record: ManagedVec<TextRecord<Self::Api>>,
+    ) {
+        let domain_record_exists = !self.domain_name(&domain_name).is_empty();
+        require!(domain_record_exists, "Domain not exist");
+
+        let caller = self.blockchain().get_caller();
+
+        require!(self.is_owner(&caller, &domain_name), "Not Allowed!");
+
+        let mut domain = self.domain_name(&domain_name).get();
         domain.text_record = Some(text_record);
+        self.domain_name(&domain_name).set(&domain);
+    }
+
+    #[endpoint]
+    fn update_domain_profile_wallets(
+        &self,
+        domain_name: ManagedBuffer,
+        wallets: Wallets<Self::Api>,
+    ) {
+        let domain_record_exists = !self.domain_name(&domain_name).is_empty();
+        require!(domain_record_exists, "Domain not exist");
+
+        let caller = self.blockchain().get_caller();
+
+        require!(self.is_owner(&caller, &domain_name), "Not Allowed!");
+
+        let mut domain = self.domain_name(&domain_name).get();
         domain.wallets = Some(wallets);
         self.domain_name(&domain_name).set(&domain);
     }
@@ -196,29 +259,23 @@ pub trait XnMain:
         let (token, _, payment) = self.call_value().egld_or_single_esdt().into_tuple();
         let caller = self.blockchain().get_caller();
         require!(self.is_owner(&caller, &sub_domain), "Not Allowed!");
-        let primary_domain = self.get_primary_domain(&sub_domain).unwrap();
-        let len = self.sub_domains(&primary_domain).len();
-        let mut is_exist = false;
-        for i in 1..len + 1 {
-            let item = self.sub_domains(&primary_domain).get(i);
-            if sub_domain == item.name {
-                is_exist = true;
-                break;
-            }
-        }
 
-        require!(!is_exist, "Already registered");
-        self.internal_set_egld_price();
-        let egld_usd_price = self.egld_usd_price().get();
-        let price_egld = BigUint::from(SUB_DOMAIN_COST_IN_CENT)
-            * BigUint::from(10_000_000_000_000_000u64)
-            / BigUint::from(egld_usd_price);
-        require!(price_egld <= payment, "Insufficient EGLD Funds");
+        let primary_domain = self.get_primary_domain(&sub_domain).unwrap();
+
         let new_sub_domain = SubDomain {
             name: sub_domain,
-            address: address,
+            address,
         };
-        let _ = &mut self.sub_domains(&primary_domain).push(&new_sub_domain);
+        let is_exist = self.sub_domains(&primary_domain).contains(&new_sub_domain);
+        require!(!is_exist, "Already registered");
+
+        self.internal_set_egld_price();
+        let egld_usd_price = self.egld_usd_price().get();
+        let price_egld = BigUint::from(SUB_DOMAIN_COST_USD) / BigUint::from(egld_usd_price);
+
+        require!(price_egld <= payment, "Insufficient EGLD Funds");
+
+        let _ = &mut self.sub_domains(&primary_domain).insert(new_sub_domain);
         // return extra EGLD if customer sent more than required
         if price_egld < payment {
             let excess = payment - price_egld;
@@ -330,38 +387,23 @@ pub trait XnMain:
     }
 
     #[endpoint]
-    fn remove_sub_domain(&self, sub_domain_name: ManagedBuffer) {
+    fn remove_sub_domain(&self, sub_domain_name: ManagedBuffer, address: ManagedAddress) {
         let caller = self.blockchain().get_caller();
 
         require!(self.is_owner(&caller, &sub_domain_name), "Not Allowed!");
 
         let primary_domain = self.get_primary_domain(&sub_domain_name).unwrap();
         let mut sub_domain_mapper = self.sub_domains(&primary_domain);
-        let len = sub_domain_mapper.len();
 
-        let mut index = 0;
-        // require!(
-        //     primary_domain == ManagedBuffer::new_from_bytes(b"owner.mvx"),
-        //     "primary domain wrong"
-        // );
-        // require!(
-        //     sub_domain_mapper.get(1).name == ManagedBuffer::new_from_bytes(b"subdomain.owner.mvx"),
-        //     "storage value error"
-        // );
-        // require!(
-        //     sub_domain_name == ManagedBuffer::new_from_bytes(b"subdomain.owner.mvx"),
-        //     "parameter value error"
-        // );
-
-        for i in 1..len + 1 {
-            if sub_domain_mapper.get(i).name == sub_domain_name {
-                index = i;
-                break;
-            }
-        }
-
-        require!(index > 0, "there is no sub domain to remove");
-        sub_domain_mapper.swap_remove(index);
+        require!(sub_domain_mapper.contains(&SubDomain{
+            name: sub_domain_name.clone(),
+            address: address.clone()
+        }), "there is no sub domain to remove");
+        
+        sub_domain_mapper.swap_remove(&SubDomain{
+            name: sub_domain_name,
+            address
+        });
     }
 
     // endpoints - admin-only
@@ -387,8 +429,7 @@ pub trait XnMain:
         // Update the storage with the new price
         let mut fees = self.rental_to_length().get();
         fees[domain_length as usize] = yearly_rent_usd;
-        self.rental_to_length()
-            .set(fees);
+        self.rental_to_length().set(fees);
     }
 
     #[only_owner]
