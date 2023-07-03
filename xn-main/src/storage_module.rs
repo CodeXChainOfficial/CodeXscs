@@ -47,7 +47,7 @@ pub trait StorageModule {
 
   #[view(get_prices_usd)]
   #[storage_mapper("prices_usd")]
-  fn rental_to_length(&self) -> SingleValueMapper<[u64;5]>; 
+  fn rental_to_length(&self) -> SingleValueMapper<Vec<u64>>; 
 
   #[view(get_egld_usd_price)]
   #[storage_mapper("egld_usd_price")]

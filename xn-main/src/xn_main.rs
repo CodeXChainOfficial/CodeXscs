@@ -3,7 +3,7 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
-use core::{i16::MIN, ops::Deref};
+use core::{ops::Deref};
 
 pub mod callback_module;
 pub mod constant_module;
@@ -13,8 +13,6 @@ pub mod price_oracle_module;
 pub mod storage_module;
 pub mod user_builtin;
 pub mod utils_module;
-
-use callback_module::*;
 
 use constant_module::{
     DAY_IN_SECONDS, HOUR_IN_SECONDS, MIGRATION_PERIOD, MIN_IN_SECONDS, MONTH_IN_SECONDS,
@@ -41,7 +39,8 @@ pub trait XnMain:
         self.oracle_address().set(&oracle_address);
 
         //set default annual rental for domain name length in US cents
-        let default_rent_fees: [u64; 5] = [10_000u64, 10_000u64, 10_000u64, 1_000u64, 100];
+        let mut default_rent_fees = Vec::new();
+        default_rent_fees.extend([10_000u64, 10_000u64, 10_000u64, 1_000u64, 100]);
         self.rental_to_length().set(default_rent_fees);
 
         // set default EGLD/USD price
@@ -165,100 +164,57 @@ pub trait XnMain:
         }
     }
 
+    #[payable("ESDT")]
     #[endpoint]
-    fn update_domain_profile_overview(
+    fn update_domain_profile(
         &self,
         domain_name: ManagedBuffer,
-        profile: Profile<Self::Api>
+        profile: Option<Profile<Self::Api>>,
+        social_media: Option<SocialMedia<Self::Api>>,
+        text_record: Option<ManagedVec<TextRecord<Self::Api>>>,
+        wallets: Option<Wallets<Self::Api>>,
     ) {
+        require!(self.is_owner(&domain_name) == true, "Not allowed");
+
         let domain_record_exists = !self.domain_name(&domain_name).is_empty();
         require!(domain_record_exists, "Domain not exist");
 
-        let caller = self.blockchain().get_caller();
-
-        require!(self.is_owner(&caller, &domain_name), "Not Allowed!");
-
         let mut domain = self.domain_name(&domain_name).get();
-        domain.profile = Some(profile);
+        if let Some(_profile) = profile {
+            domain.profile = Some(_profile);
+        }
+        if let Some(_social) = social_media {
+            domain.social_media = Some(_social);
+        }
+        if let Some(_textrecord) = text_record {
+            domain.text_record = Some(_textrecord);
+        }
+        if let Some(_wallets) = wallets {
+            domain.wallets = Some(_wallets);
+        }
+
         self.domain_name(&domain_name).set(&domain);
+
+        self.refund();
     }
 
-    #[endpoint]
-    fn update_domain_profile_socialmedia(
-        &self,
-        domain_name: ManagedBuffer,
-        social_media: SocialMedia<Self::Api>,
-    ) {
-        let domain_record_exists = !self.domain_name(&domain_name).is_empty();
-        require!(domain_record_exists, "Domain not exist");
-
-        let caller = self.blockchain().get_caller();
-
-        require!(self.is_owner(&caller, &domain_name), "Not Allowed!");
-
-        let mut domain = self.domain_name(&domain_name).get();
-        domain.social_media = Some(social_media);
-        self.domain_name(&domain_name).set(&domain);
-    }
-
-    #[endpoint]
-    fn update_domain_profile_textrecord(
-        &self,
-        domain_name: ManagedBuffer,
-        text_record: ManagedVec<TextRecord<Self::Api>>,
-    ) {
-        let domain_record_exists = !self.domain_name(&domain_name).is_empty();
-        require!(domain_record_exists, "Domain not exist");
-
-        let caller = self.blockchain().get_caller();
-
-        require!(self.is_owner(&caller, &domain_name), "Not Allowed!");
-
-        let mut domain = self.domain_name(&domain_name).get();
-        domain.text_record = Some(text_record);
-        self.domain_name(&domain_name).set(&domain);
-    }
-
-    #[endpoint]
-    fn update_domain_profile_wallets(
-        &self,
-        domain_name: ManagedBuffer,
-        wallets: Wallets<Self::Api>,
-    ) {
-        let domain_record_exists = !self.domain_name(&domain_name).is_empty();
-        require!(domain_record_exists, "Domain not exist");
-
-        let caller = self.blockchain().get_caller();
-
-        require!(self.is_owner(&caller, &domain_name), "Not Allowed!");
-
-        let mut domain = self.domain_name(&domain_name).get();
-        domain.wallets = Some(wallets);
-        self.domain_name(&domain_name).set(&domain);
-    }
-
+    #[payable("ESDT")]
     #[endpoint]
     fn update_primary_address(
         &self,
         domain_name_or_sub_domain: ManagedBuffer,
         assign_to: OptionalValue<ManagedAddress>,
     ) {
-        let caller = self.blockchain().get_caller();
-
-        require!(
-            self.is_owner(&caller, &domain_name_or_sub_domain),
-            "Not Allowed!"
-        );
-
         self.internal_update_primary_address(&domain_name_or_sub_domain, assign_to);
     }
 
-    #[payable("EGLD")]
+    #[payable("*")]
     #[endpoint]
     fn register_sub_domain(&self, sub_domain: ManagedBuffer, address: ManagedAddress) {
-        let (token, _, payment) = self.call_value().egld_or_single_esdt().into_tuple();
+        require!(self.is_owner(&sub_domain), "Not Allowed!");
+
+        let payment = self.call_value().esdt_value();
         let caller = self.blockchain().get_caller();
-        require!(self.is_owner(&caller, &sub_domain), "Not Allowed!");
 
         let primary_domain = self.get_primary_domain(&sub_domain).unwrap();
 
@@ -279,8 +235,10 @@ pub trait XnMain:
         // return extra EGLD if customer sent more than required
         if price_egld < payment {
             let excess = payment - price_egld;
-            self.send().direct(&caller, &token, 0, &excess);
+            self.send().direct(&caller, &EgldOrEsdtTokenIdentifier::egld(), 0, &excess);
         }
+
+        self.refund();
     }
 
     #[endpoint]
@@ -329,6 +287,7 @@ pub trait XnMain:
         self.reservations(&new_domain_name).clear();
     }
 
+    #[payable("ESDT")]
     #[endpoint]
     fn update_key_value(
         &self,
@@ -336,13 +295,7 @@ pub trait XnMain:
         key: ManagedBuffer,
         value: OptionalValue<ManagedBuffer>,
     ) {
-        let caller = self.blockchain().get_caller();
-
-        require!(
-            self.is_owner(&caller, &domain_name)
-                || self.resolve_domain_name(&domain_name).get() == caller.clone(),
-            "Not Allowed!"
-        );
+        require!(self.is_owner(&domain_name), "Not Allowed!");
 
         match value {
             OptionalValue::Some(_value) => {
@@ -352,7 +305,10 @@ pub trait XnMain:
                 self.resolve_domain_name_key(&domain_name, &key).clear();
             }
         }
+
+        self.refund();
     }
+
     #[payable("*")]
     #[endpoint]
     fn transfer_domain(&self, domain_name: ManagedBuffer, new_owner: ManagedAddress) {
@@ -362,9 +318,7 @@ pub trait XnMain:
         let caller = self.blockchain().get_caller();
 
         require!(&caller != &new_owner, "can't transfer domain");
-
         require!(!domain_name_mapper.is_empty(), "wrong domain name");
-
         require!(
             domain_name_mapper.get().nft_nonce == token_nonce,
             "Not Allowed!"
@@ -386,24 +340,28 @@ pub trait XnMain:
         );
     }
 
+    #[payable("ESDT")]
     #[endpoint]
     fn remove_sub_domain(&self, sub_domain_name: ManagedBuffer, address: ManagedAddress) {
-        let caller = self.blockchain().get_caller();
-
-        require!(self.is_owner(&caller, &sub_domain_name), "Not Allowed!");
+        require!(self.is_owner(&sub_domain_name), "Not Allowed!");
 
         let primary_domain = self.get_primary_domain(&sub_domain_name).unwrap();
         let mut sub_domain_mapper = self.sub_domains(&primary_domain);
 
-        require!(sub_domain_mapper.contains(&SubDomain{
-            name: sub_domain_name.clone(),
-            address: address.clone()
-        }), "there is no sub domain to remove");
-        
-        sub_domain_mapper.swap_remove(&SubDomain{
+        require!(
+            sub_domain_mapper.contains(&SubDomain {
+                name: sub_domain_name.clone(),
+                address: address.clone()
+            }),
+            "there is no sub domain to remove"
+        );
+
+        sub_domain_mapper.swap_remove(&SubDomain {
             name: sub_domain_name,
-            address
+            address,
         });
+
+        self.refund();
     }
 
     // endpoints - admin-only

@@ -58,8 +58,11 @@
             "outputs": []
         },
         {
-            "name": "update_domain_profile_overview",
+            "name": "update_domain_profile",
             "mutability": "mutable",
+            "payableInTokens": [
+                "ESDT"
+            ],
             "inputs": [
                 {
                     "name": "domain_name",
@@ -67,52 +70,19 @@
                 },
                 {
                     "name": "profile",
-                    "type": "Profile"
-                }
-            ],
-            "outputs": []
-        },
-        {
-            "name": "update_domain_profile_socialmedia",
-            "mutability": "mutable",
-            "inputs": [
-                {
-                    "name": "domain_name",
-                    "type": "bytes"
+                    "type": "Option<Profile>"
                 },
                 {
                     "name": "social_media",
-                    "type": "SocialMedia"
-                }
-            ],
-            "outputs": []
-        },
-        {
-            "name": "update_domain_profile_textrecord",
-            "mutability": "mutable",
-            "inputs": [
-                {
-                    "name": "domain_name",
-                    "type": "bytes"
+                    "type": "Option<SocialMedia>"
                 },
                 {
                     "name": "text_record",
-                    "type": "List<TextRecord>"
-                }
-            ],
-            "outputs": []
-        },
-        {
-            "name": "update_domain_profile_wallets",
-            "mutability": "mutable",
-            "inputs": [
-                {
-                    "name": "domain_name",
-                    "type": "bytes"
+                    "type": "Option<List<TextRecord>>"
                 },
                 {
                     "name": "wallets",
-                    "type": "Wallets"
+                    "type": "Option<Wallets>"
                 }
             ],
             "outputs": []
@@ -120,6 +90,9 @@
         {
             "name": "update_primary_address",
             "mutability": "mutable",
+            "payableInTokens": [
+                "ESDT"
+            ],
             "inputs": [
                 {
                     "name": "domain_name_or_sub_domain",
@@ -137,7 +110,7 @@
             "name": "register_sub_domain",
             "mutability": "mutable",
             "payableInTokens": [
-                "EGLD"
+                "*"
             ],
             "inputs": [
                 {
@@ -165,6 +138,9 @@
         {
             "name": "update_key_value",
             "mutability": "mutable",
+            "payableInTokens": [
+                "ESDT"
+            ],
             "inputs": [
                 {
                     "name": "domain_name",
@@ -203,6 +179,9 @@
         {
             "name": "remove_sub_domain",
             "mutability": "mutable",
+            "payableInTokens": [
+                "ESDT"
+            ],
             "inputs": [
                 {
                     "name": "sub_domain_name",
@@ -388,7 +367,7 @@
             "inputs": [],
             "outputs": [
                 {
-                    "type": "array5<u64>"
+                    "type": "List<u64>"
                 }
             ]
         },

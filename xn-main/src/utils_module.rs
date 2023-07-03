@@ -144,7 +144,7 @@ pub trait UtilsModule:
     }
 
     fn can_claim(&self, address: &ManagedAddress, domain_name: &ManagedBuffer) -> bool {
-        if self.is_owner(address, domain_name) {
+        if self.is_owner(domain_name) {
             return true;
         }
 
@@ -183,30 +183,35 @@ pub trait UtilsModule:
         name
     }
 
-    fn is_owner(&self, address: &ManagedAddress, domain_name: &ManagedBuffer) -> bool {
-        let name = self.get_primary_domain(domain_name);
-        match name {
-            Option::Some(name) => {
-                let domain_empty = self.domain_name(&name).is_empty();
-                /**
-                 * fixed error by require
-                 */
-                // require!(!domain_empty, "Primary Domain not registered");
-                if domain_empty {
-                    return false;
-                }
-                /**
-                 *
-                 */
-                let domain_record = self.domain_name(&name).get();
-                let is_owner = self.is_owner_of_nft(&address, domain_record.nft_nonce);
+    fn is_owner(&self, domain_name: &ManagedBuffer) -> bool {
+        let primary_domain = self.get_primary_domain(domain_name).unwrap();
 
-                return is_owner;
+        let payments = self.call_value().all_esdt_transfers();
+
+        for payment in payments.iter() {
+            if &payment.token_identifier == self.domain_nft().get_token_id_ref()
+                && payment.token_nonce != self.domain_name(&primary_domain).get().nft_nonce
+            {
+                return true;
             }
-            Option::None => {}
+        }
+        return false;
+    }
+    
+    fn refund(&self) {
+        let payments = self.call_value().all_esdt_transfers();
+
+        let mut refund_payments = ManagedVec::new();
+        for payment in payments.iter() {
+            if payment.token_identifier != EgldOrEsdtTokenIdentifier::egld(){
+                refund_payments.push(payment);
+            }
         }
 
-        return false;
+        self.send().direct_multi(
+            &self.blockchain().get_caller(),
+            &refund_payments
+        );
     }
 
     fn internal_update_primary_address(
@@ -215,10 +220,10 @@ pub trait UtilsModule:
         assign_to: OptionalValue<ManagedAddress>,
     ) {
         let caller = self.blockchain().get_caller();
-        let is_owner = self.is_owner(&caller, domain_name);
-        require!(is_owner, "Not owner");
+        require!(self.is_owner(domain_name), "Not allowed");
 
         let domain_record = self.domain_name(&domain_name).get();
+
         let domain_nft = self.domain_nft();
         let token_id = domain_nft.get_token_id_ref();
 
@@ -233,7 +238,9 @@ pub trait UtilsModule:
                     );
                 }
             }
-            OptionalValue::None => {}
+            OptionalValue::None => {
+                self.refund();
+            }
         }
     }
 

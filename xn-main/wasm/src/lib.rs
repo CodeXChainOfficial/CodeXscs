@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           28
+// Endpoints:                           25
 // Async Callback:                       1
-// Total number of exported functions:  30
+// Total number of exported functions:  27
 
 #![no_std]
 #![feature(alloc_error_handler, lang_items)]
@@ -19,10 +19,7 @@ multiversx_sc_wasm_adapter::endpoints! {
     xn_main
     (
         register_or_renew
-        update_domain_profile_overview
-        update_domain_profile_socialmedia
-        update_domain_profile_textrecord
-        update_domain_profile_wallets
+        update_domain_profile
         update_primary_address
         register_sub_domain
         migrate_domain
