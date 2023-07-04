@@ -4,6 +4,17 @@ multiversx_sc::derive_imports!();
 #[derive(
   ManagedVecItem, NestedEncode, NestedDecode, TopEncode, TopDecode, Clone, TypeAbi, Default,
 )]
+pub struct RentalFee {
+  pub one_letter: u64,
+  pub two_letter: u64,
+  pub three_letter: u64,
+  pub four_letter: u64,
+  pub other: u64,
+}
+
+#[derive(
+  ManagedVecItem, NestedEncode, NestedDecode, TopEncode, TopDecode, Clone, TypeAbi, Default,
+)]
 pub struct Profile<M: ManagedTypeApi> {
   pub name: ManagedBuffer<M>,
   pub avatar: ManagedBuffer<M>,

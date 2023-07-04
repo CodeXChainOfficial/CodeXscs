@@ -3,7 +3,7 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
-use core::{ops::Deref};
+use core::ops::Deref;
 
 pub mod callback_module;
 pub mod constant_module;
@@ -19,8 +19,8 @@ use constant_module::{
     NFT_AMOUNT, SUB_DOMAIN_COST_USD, YEAR_IN_SECONDS,
 };
 use data_module::{
-    DomainName, DomainNameAttributes, PeriodType, Profile, Reservation, SocialMedia, SubDomain,
-    TextRecord, Wallets,
+    DomainName, DomainNameAttributes, PeriodType, Profile, RentalFee, Reservation, SocialMedia,
+    SubDomain, TextRecord, Wallets,
 };
 
 /// A contract that registers and manages domain names issuance on MultiversX
@@ -39,9 +39,14 @@ pub trait XnMain:
         self.oracle_address().set(&oracle_address);
 
         //set default annual rental for domain name length in US cents
-        let mut default_rent_fees = Vec::new();
-        default_rent_fees.extend([10_000u64, 10_000u64, 10_000u64, 1_000u64, 100]);
-        self.rental_to_length().set(default_rent_fees);
+        let mut default_rent_fees = RentalFee {
+            one_letter: 10_000u64,
+            two_letter: 10_000u64,
+            three_letter: 10_000u64,
+            four_letter: 1_000u64,
+            other: 100,
+        };
+        self.rental_fee().set(default_rent_fees);
 
         // set default EGLD/USD price
         self.internal_set_egld_price();
@@ -235,7 +240,8 @@ pub trait XnMain:
         // return extra EGLD if customer sent more than required
         if price_egld < payment {
             let excess = payment - price_egld;
-            self.send().direct(&caller, &EgldOrEsdtTokenIdentifier::egld(), 0, &excess);
+            self.send()
+                .direct(&caller, &EgldOrEsdtTokenIdentifier::egld(), 0, &excess);
         }
 
         self.refund();
@@ -384,10 +390,15 @@ pub trait XnMain:
     #[only_owner]
     #[endpoint]
     fn update_price_usd(&self, domain_length: u64, yearly_rent_usd: u64) {
-        // Update the storage with the new price
-        let mut fees = self.rental_to_length().get();
-        fees[domain_length as usize] = yearly_rent_usd;
-        self.rental_to_length().set(fees);
+        let mut fees = self.rental_fee().get();
+        match domain_length {
+            1 => fees.one_letter = yearly_rent_usd,
+            2 => fees.two_letter = yearly_rent_usd,
+            3 => fees.three_letter = yearly_rent_usd,
+            4 => fees.four_letter = yearly_rent_usd,
+            _ => fees.other = yearly_rent_usd,
+        }
+        self.rental_fee().set(fees);
     }
 
     #[only_owner]

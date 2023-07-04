@@ -111,16 +111,16 @@ pub trait UtilsModule:
     }
 
     fn rent_price(&self, domain_name: &ManagedBuffer, secs: &u64) -> BigUint<Self::Api> {
-        let len = domain_name.len();
-        let prices = self.rental_to_length().get();
-        let prices_len = prices.len();
-        let price_index = if len < prices_len {
-            len
-        } else {
-            prices_len - 1
+        let rental_fee = self.rental_fee().get();
+
+        let annual_price_usd = match domain_name.len() {
+            1 => rental_fee.one_letter,
+            2 => rental_fee.two_letter,
+            3 => rental_fee.three_letter,
+            4 => rental_fee.four_letter,
+            _ => rental_fee.other
         };
 
-        let annual_price_usd = prices[price_index];
         self.internal_set_egld_price();
         let egld_usd_price = self.egld_usd_price().get();
 
