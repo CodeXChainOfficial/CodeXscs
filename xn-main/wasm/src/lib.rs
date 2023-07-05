@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                           25
+// Endpoints:                           27
 // Async Callback:                       1
-// Total number of exported functions:  27
+// Total number of exported functions:  29
 
 #![no_std]
 #![feature(alloc_error_handler, lang_items)]
@@ -18,6 +18,7 @@ multiversx_sc_wasm_adapter::panic_handler!();
 multiversx_sc_wasm_adapter::endpoints! {
     xn_main
     (
+        issue_and_set_all_roles
         register_or_renew
         update_domain_profile
         update_primary_address
@@ -30,6 +31,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         clear_reservations
         update_price_usd
         fetch_egld_usd_prices
+        get_domain_nft_id
         get_reservation
         get_domain_nft
         get_accept_request

@@ -5,6 +5,7 @@ multiversx_sc::derive_imports!();
 
 use core::ops::Deref;
 
+pub mod async_call_module;
 pub mod callback_module;
 pub mod constant_module;
 pub mod data_module;
@@ -14,19 +15,16 @@ pub mod storage_module;
 pub mod user_builtin;
 pub mod utils_module;
 
-use constant_module::{
-    DAY_IN_SECONDS, HOUR_IN_SECONDS, MIGRATION_PERIOD, MIN_IN_SECONDS, MONTH_IN_SECONDS,
-    NFT_AMOUNT, SUB_DOMAIN_COST_USD, YEAR_IN_SECONDS,
-};
+use constant_module::{MIGRATION_PERIOD, NFT_AMOUNT, WEGLD_ID};
 use data_module::{
     DomainName, DomainNameAttributes, PeriodType, Profile, RentalFee, Reservation, SocialMedia,
     SubDomain, TextRecord, Wallets,
 };
 
-/// A contract that registers and manages domain names issuance on MultiversX
 #[multiversx_sc::contract]
 pub trait XnMain:
     nft_module::NftModule
+    + async_call_module::AsyncCallModule
     + callback_module::CallbackModule
     + storage_module::StorageModule
     + utils_module::UtilsModule
@@ -39,18 +37,14 @@ pub trait XnMain:
         self.oracle_address().set(&oracle_address);
 
         //set default annual rental for domain name length in US cents
-        let mut default_rent_fees = RentalFee {
+        let default_rent_fees = RentalFee {
             one_letter: 10_000u64,
             two_letter: 10_000u64,
-            three_letter: 10_000u64,
+            three_letter: 1u64,
             four_letter: 1_000u64,
             other: 100,
         };
         self.rental_fee().set(default_rent_fees);
-
-        // set default EGLD/USD price
-        self.internal_set_egld_price();
-        // self.egld_usd_price().set(268000000000000 as u64);
 
         // set default royalties
         self.royalties().set(0);
@@ -61,10 +55,15 @@ pub trait XnMain:
         // Initialize the allowed top-level domain names
         let tld_mvx = ManagedBuffer::from("mvx");
         self.allowed_top_level_domains().push(&tld_mvx);
+
+        // set default EGLD/USD price
+        // self.egld_usd_price().set(268000000000000 as u64);
+        self.internal_set_egld_price();
     }
 
     #[only_owner]
     #[payable("EGLD")]
+    #[endpoint]
     fn issue_and_set_all_roles(
         &self,
         token_display_name: ManagedBuffer,
@@ -91,7 +90,6 @@ pub trait XnMain:
         unit: PeriodType,
         assign_to: OptionalValue<ManagedAddress>,
     ) {
-        let (token, _, payment) = self.call_value().egld_or_single_esdt().into_tuple();
         let caller = self.blockchain().get_caller();
 
         let is_name_valid = self.is_name_valid(&domain_name);
@@ -111,90 +109,37 @@ pub trait XnMain:
             "name is not available for caller"
         );
 
-        let secs = [
-            YEAR_IN_SECONDS,
-            MONTH_IN_SECONDS,
-            DAY_IN_SECONDS,
-            HOUR_IN_SECONDS,
-            MIN_IN_SECONDS,
-        ];
-        let period_secs: u64 = u64::from(period) * secs[unit as usize];
-
-        let price = self.rent_price(&domain_name, &period_secs);
-        require!(price <= payment, "Insufficient EGLD Funds");
-
-        let since = self.get_current_time();
-
-        let domain_record_exists = !self.domain_name(&domain_name).is_empty();
-
-        // NFT functionality
-        if domain_record_exists {
-            let mut domain_record = self.domain_name(&domain_name).get();
-            domain_record.expires_at = since + period_secs;
-            self.domain_name(&domain_name).set(domain_record.clone());
-        } else {
-            // // Mint NFT for the new owner
-            let attributes = DomainNameAttributes {
-                expires_at: since + period_secs,
-            };
-            let nft_nonce;
-            match assign_to {
-                OptionalValue::Some(to) => {
-                    nft_nonce = self.mint_nft(&to, &domain_name, &price, &attributes);
-                }
-                OptionalValue::None => {
-                    nft_nonce = self.mint_nft(&caller, &domain_name, &price, &attributes);
-                }
-            }
-            let new_domain_record = DomainName {
-                name: domain_name.clone(),
-                expires_at: attributes.expires_at,
-                nft_nonce,
-                profile: Option::None,
-                social_media: Option::None,
-                text_record: Option::None,
-                wallets: Option::None,
-            };
-
-            self.domain_name(&domain_name)
-                .set(new_domain_record.clone());
-        }
-
-        // self._update_primary_address(&domain_name, assign_to);
-
-        // return extra EGLD if customer sent more than required
-        if price < payment {
-            let excess = payment - price;
-            self.send().direct(&caller, &token, 0, &excess);
-        }
+        self.get_egld_price_for_register(domain_name, period, unit, assign_to);
     }
 
-    #[payable("ESDT")]
+    #[payable("*")]
     #[endpoint]
     fn update_domain_profile(
         &self,
         domain_name: ManagedBuffer,
-        profile: Option<Profile<Self::Api>>,
-        social_media: Option<SocialMedia<Self::Api>>,
-        text_record: Option<ManagedVec<TextRecord<Self::Api>>>,
-        wallets: Option<Wallets<Self::Api>>,
+        profile: OptionalValue<Profile<Self::Api>>,
+        social_media: OptionalValue<SocialMedia<Self::Api>>,
+        text_record: OptionalValue<ManagedVec<TextRecord<Self::Api>>>,
+        wallets: OptionalValue<Wallets<Self::Api>>,
     ) {
-        require!(self.is_owner(&domain_name) == true, "Not allowed");
+        let (token_id, token_nonce, _amount) = self.call_value().egld_or_single_esdt().into_tuple();
+
+        require!(self.is_owner(&domain_name), "Not allowed {} {} {} {}", domain_name, token_id, token_nonce, _amount);
 
         let domain_record_exists = !self.domain_name(&domain_name).is_empty();
         require!(domain_record_exists, "Domain not exist");
 
         let mut domain = self.domain_name(&domain_name).get();
-        if let Some(_profile) = profile {
+        if let OptionalValue::Some(_profile) = profile {
             domain.profile = Some(_profile);
         }
-        if let Some(_social) = social_media {
+        if let OptionalValue::Some(_social) = social_media {
             domain.social_media = Some(_social);
         }
-        if let Some(_textrecord) = text_record {
+        if let OptionalValue::Some(_textrecord) = text_record {
             domain.text_record = Some(_textrecord);
         }
-        if let Some(_wallets) = wallets {
+        if let OptionalValue::Some(_wallets) = wallets {
             domain.wallets = Some(_wallets);
         }
 
@@ -218,31 +163,16 @@ pub trait XnMain:
     fn register_sub_domain(&self, sub_domain: ManagedBuffer, address: ManagedAddress) {
         require!(self.is_owner(&sub_domain), "Not Allowed!");
 
-        let payment = self.call_value().esdt_value();
-        let caller = self.blockchain().get_caller();
+        // let primary_domain = self.get_primary_domain(&sub_domain).unwrap();
 
-        let primary_domain = self.get_primary_domain(&sub_domain).unwrap();
+        // let new_sub_domain = SubDomain {
+        //     name: sub_domain.clone(),
+        //     address: address.clone(),
+        // };
+        // let is_exist = self.sub_domains(&primary_domain).contains(&new_sub_domain);
+        // require!(!is_exist, "Already registered");
 
-        let new_sub_domain = SubDomain {
-            name: sub_domain,
-            address,
-        };
-        let is_exist = self.sub_domains(&primary_domain).contains(&new_sub_domain);
-        require!(!is_exist, "Already registered");
-
-        self.internal_set_egld_price();
-        let egld_usd_price = self.egld_usd_price().get();
-        let price_egld = BigUint::from(SUB_DOMAIN_COST_USD) / BigUint::from(egld_usd_price);
-
-        require!(price_egld <= payment, "Insufficient EGLD Funds");
-
-        let _ = &mut self.sub_domains(&primary_domain).insert(new_sub_domain);
-        // return extra EGLD if customer sent more than required
-        if price_egld < payment {
-            let excess = payment - price_egld;
-            self.send()
-                .direct(&caller, &EgldOrEsdtTokenIdentifier::egld(), 0, &excess);
-        }
+        // self.get_egld_price_for_register_subdomain(sub_domain, address);
 
         self.refund();
     }
@@ -268,7 +198,6 @@ pub trait XnMain:
         let domain_record_exists = !self.domain_name(&new_domain_name).is_empty();
         require!(!domain_record_exists, "Domain already migrated.");
 
-        // // Mint NFT for the new owner
         let attributes = DomainNameAttributes {
             expires_at: reservation.until,
         };
@@ -329,9 +258,7 @@ pub trait XnMain:
             domain_name_mapper.get().nft_nonce == token_nonce,
             "Not Allowed!"
         );
-
         require!(!nft_token_id_mapper.is_empty(), "Token not issued!");
-
         require!(
             &token_id == self.domain_nft().get_token_id_ref()
                 && token_nonce == domain_name_mapper.get().nft_nonce,
@@ -370,7 +297,6 @@ pub trait XnMain:
         self.refund();
     }
 
-    // endpoints - admin-only
     #[only_owner]
     #[endpoint]
     fn set_reservations(&self, reservations: ManagedVec<Reservation<Self::Api>>) {
@@ -403,7 +329,19 @@ pub trait XnMain:
 
     #[only_owner]
     #[endpoint]
-    fn fetch_egld_usd_prices(&self) {
+    fn fetch_egld_usd_prices(&self){
+        // let res = self.sync_get_equivalent(
+        //     self.oracle_address().get(),
+        //     TokenIdentifier::from_esdt_bytes(WEGLD_ID),
+        //     BigUint::from(1_000_000_000_000_000_000u64),
+        // );
+        // self.egld_usd_price().set(res.to_u64().unwrap());
+        // res
         self.internal_fetch_egld_usd_prices();
+    }
+
+    #[view]
+    fn get_domain_nft_id(&self) -> TokenIdentifier {
+        self.domain_nft().get_token_id_ref().clone()
     }
 }

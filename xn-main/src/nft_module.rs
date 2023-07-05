@@ -7,9 +7,10 @@ const NFT_AMOUNT: u32 = 1;
 const ROYALTIES_MAX: u32 = 10_000; // 100%
 
 #[multiversx_sc::module]
-pub trait NftModule: 
-    crate::callback_module::CallbackModule 
-    + crate::storage_module::StorageModule {
+pub trait NftModule:
+    crate::storage_module::StorageModule
+    + crate::utils_module::UtilsModule
+{
     #[allow(clippy::too_many_arguments)]
     fn create_nft_with_attributes<T: TopEncode>(
         &self,
@@ -85,31 +86,21 @@ pub trait NftModule:
             token_used_as_payment_nonce,
         );
 
-        self.send().direct_esdt(
-            new_owner,
-            token_id,
-            nft_nonce,
-            &BigUint::from(NFT_AMOUNT),
-        );
+        self.send()
+            .direct_esdt(new_owner, token_id, nft_nonce, &BigUint::from(NFT_AMOUNT));
 
         nft_nonce
     }
 
-    fn is_owner_of_nft(
-        &self,
-        owner: &ManagedAddress,
-        nft_nonce: u64
-    ) -> bool {
+    fn is_owner_of_nft(&self, owner: &ManagedAddress, nft_nonce: u64) -> bool {
         self.require_token_issued();
         let domain_nft = self.domain_nft();
         let token_id = domain_nft.get_token_id_ref();
 
-        let balance = self.blockchain().get_esdt_balance(
-            &owner,
-            token_id,
-            nft_nonce
-        );
+        let balance = self
+            .blockchain()
+            .get_esdt_balance(&owner, token_id, nft_nonce);
 
         balance == 1
-    }   
+    }
 }

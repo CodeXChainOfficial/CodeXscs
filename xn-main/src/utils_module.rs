@@ -1,9 +1,7 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
-use crate::callback_module::*;
 use crate::constant_module::NFT_AMOUNT;
-use crate::constant_module::WEGLD_ID;
 use crate::constant_module::{GRACE_PERIOD, MAX_LENGTH, MIN_LENGTH, YEAR_IN_SECONDS};
 use crate::user_builtin;
 
@@ -25,13 +23,7 @@ fn check_name_char(ch: u8) -> bool {
 }
 
 #[multiversx_sc::module]
-pub trait UtilsModule:
-    crate::storage_module::StorageModule
-    + crate::callback_module::CallbackModule
-    + crate::nft_module::NftModule
-    + crate::price_oracle_module::PriceOracleModule
-{
-    /// validate_name upon registration
+pub trait UtilsModule: crate::storage_module::StorageModule {
     fn is_name_valid(&self, name: &ManagedBuffer) -> Result<(), &'static str> {
         let name_len = name.len();
 
@@ -88,7 +80,6 @@ pub trait UtilsModule:
         Result::Ok(())
     }
 
-    // Helper function to split domain name into parts
     fn split_domain_name(&self, name: &ManagedBuffer) -> ManagedVec<ManagedBuffer> {
         let mut parts = ManagedVec::new();
         let mut start: usize = 0;
@@ -118,10 +109,9 @@ pub trait UtilsModule:
             2 => rental_fee.two_letter,
             3 => rental_fee.three_letter,
             4 => rental_fee.four_letter,
-            _ => rental_fee.other
+            _ => rental_fee.other,
         };
 
-        self.internal_set_egld_price();
         let egld_usd_price = self.egld_usd_price().get();
 
         let price_egld = BigUint::from(annual_price_usd * u64::from(secs.clone()))
@@ -129,14 +119,6 @@ pub trait UtilsModule:
             / BigUint::from(YEAR_IN_SECONDS);
 
         price_egld
-    }
-
-    fn internal_set_egld_price(&self) {
-        self.xexchange_pair_get_equivalent(
-            self.oracle_address().get(),
-            TokenIdentifier::from_esdt_bytes(WEGLD_ID),
-            BigUint::from(1_000_000_000_000_000_000u64),
-        )
     }
 
     fn get_current_time(&self) -> u64 {
@@ -148,7 +130,6 @@ pub trait UtilsModule:
             return true;
         }
 
-        // Check if the address has a valid reservation for the domain name
         if !self.reservations(&domain_name).is_empty() {
             let res = self.reservations(&domain_name).get();
             if res.reserved_for == address.clone() {
@@ -161,7 +142,6 @@ pub trait UtilsModule:
             }
         }
 
-        // if domain name has expired
         if self.domain_name(&domain_name).is_empty() {
             return true;
         } else if self.get_current_time()
@@ -190,28 +170,30 @@ pub trait UtilsModule:
 
         for payment in payments.iter() {
             if &payment.token_identifier == self.domain_nft().get_token_id_ref()
-                && payment.token_nonce != self.domain_name(&primary_domain).get().nft_nonce
+                && payment.token_nonce == self.domain_name(&primary_domain).get().nft_nonce
             {
                 return true;
             }
         }
         return false;
     }
-    
-    fn refund(&self) {
-        let payments = self.call_value().all_esdt_transfers();
 
+    fn refund(&self) {
+        let caller = self.blockchain().get_caller();
+        let payments = self.call_value().all_esdt_transfers();
+        self.refund_with_detail(caller, payments);
+    }
+
+    fn refund_with_detail(&self, caller: ManagedAddress, payments: ManagedVec<Self::Api, EsdtTokenPayment<Self::Api>>) {
         let mut refund_payments = ManagedVec::new();
         for payment in payments.iter() {
-            if payment.token_identifier != EgldOrEsdtTokenIdentifier::egld(){
+            if payment.token_identifier != EgldOrEsdtTokenIdentifier::egld() {
                 refund_payments.push(payment);
             }
         }
 
-        self.send().direct_multi(
-            &self.blockchain().get_caller(),
-            &refund_payments
-        );
+        self.send()
+            .direct_multi(&caller, &refund_payments);
     }
 
     fn internal_update_primary_address(
@@ -244,31 +226,16 @@ pub trait UtilsModule:
         }
     }
 
-    fn internal_set_resolve_domain(&self, domain_name: &ManagedBuffer, address: &ManagedAddress) {
-        self.user_builtin_proxy(address.clone())
-            .set_user_name(domain_name.clone())
-            .async_call()
-            .with_callback(
-                self.callbacks()
-                    .set_user_name_callback(&domain_name, &address),
-            )
-            .call_and_exit();
-    }
-
-    fn internal_fetch_egld_usd_prices(&self) {
-        let oracle_address = self.oracle_address().get();
-
-        let mut args = ManagedVec::new();
-        args.push(ManagedBuffer::from("egld"));
-        args.push(ManagedBuffer::from("usd"));
-
-        self.send()
-            .contract_call::<()>(oracle_address, ManagedBuffer::from("latestPriceFeed"))
-            .with_raw_arguments(args.into())
-            .async_call()
-            .with_callback(self.callbacks().fetch_egld_usd_prices_callback())
-            .call_and_exit()
-    }
+    // fn internal_set_resolve_domain(&self, domain_name: &ManagedBuffer, address: &ManagedAddress) {
+    //     self.user_builtin_proxy(address.clone())
+    //         .set_user_name(domain_name.clone())
+    //         .async_call()
+    //         .with_callback(
+    //             self.callbacks()
+    //                 .set_user_name_callback(&domain_name, &address),
+    //         )
+    //         .call_and_exit();
+    // }
 
     #[proxy]
     fn user_builtin_proxy(&self, to: ManagedAddress) -> user_builtin::Proxy<Self::Api>;

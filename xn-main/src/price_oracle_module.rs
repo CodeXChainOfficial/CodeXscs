@@ -1,8 +1,9 @@
+use crate::data_module::PeriodType;
+
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
 use crate::callback_module::CallbackProxy;
-
 mod xexchange_pair_proxy {
     use super::*;
 
@@ -22,28 +23,53 @@ mod xexchange_pair_proxy {
 }
 
 #[multiversx_sc::module]
-pub trait PriceOracleModule: 
+pub trait PriceOracleModule:
     crate::callback_module::CallbackModule
     + crate::storage_module::StorageModule
+    + crate::utils_module::UtilsModule
+    + crate::nft_module::NftModule
 {
     #[proxy]
-    fn xexchange_pair_contract(&self, sc_address: ManagedAddress) -> xexchange_pair_proxy::Proxy<Self::Api>;
+    fn xexchange_pair_contract(
+        &self,
+        sc_address: ManagedAddress,
+    ) -> xexchange_pair_proxy::Proxy<Self::Api>;
 
     fn xexchange_pair_get_equivalent(
         &self,
         sc_address: ManagedAddress,
         token_in: TokenIdentifier,
         amount_in: BigUint,
+        callback: CallbackClosure<Self::Api>,
     ) {
-        let mut args = ManagedVec::new();
-        args.push(token_in.into_managed_buffer());
-        args.push(amount_in.to_bytes_be_buffer());
+        // let mut args = ManagedVec::new();
+        // args.push(token_in.into_managed_buffer());
+        // args.push(amount_in.to_bytes_be_buffer());
 
-        self.send()
-        .contract_call::<()>(sc_address, ManagedBuffer::from("get_equivalent"))
-        .with_raw_arguments(args.into())
-        .async_call()
-        .with_callback(self.callbacks().xexchange_callback())
-        .call_and_exit()
+        // self.send()
+        //     .contract_call::<()>(sc_address, ManagedBuffer::from("get_equivalent"))
+        //     .with_raw_arguments(args.into())
+        //     .async_call()
+        //     .with_callback(callback)
+        //     .call_and_exit()
+        
+        self.xexchange_pair_contract(sc_address)
+            .get_equivalent(token_in, amount_in)
+            .async_call()
+            .with_callback(callback)
+            .call_and_exit();
+    }
+
+    fn sync_get_equivalent(
+        &self,
+        sc_address: ManagedAddress,
+        token_in: TokenIdentifier,
+        amount_in: BigUint,
+    ) -> BigUint {
+        let amount_out: BigUint = self
+            .xexchange_pair_contract(sc_address)
+            .get_equivalent(token_in, amount_in)
+            .execute_on_dest_context();
+        amount_out
     }
 }

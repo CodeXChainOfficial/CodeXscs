@@ -4,8 +4,9 @@ PROXY=https://devnet-gateway.multiversx.com
 CHAIN_ID=D
 
 ################################################
-# ADDRESS=$(mxpy data load --key=address-devnet)
+ADDRESS=$(mxpy data load --key=address-devnet)
 ################################################
+
 
 PROXY_DEV_ADDRESS="erd1qqqqqqqqqqqqqpgqq67uv84ma3cekpa55l4l68ajzhq8qm3u0n4s20ecvx"
 PROXY_MAIN_ADDRESS="erd1qqqqqqqqqqqqqpgqeel2kumf0r8ffyhth7pqdujjat9nx0862jpsg2pqaq"
@@ -30,6 +31,23 @@ deploy() {
     echo ""
     echo "Smart contract address: ${ADDRESS}"
 }
+upgrade() {
+    mxpy --verbose contract upgrade \
+    ${ADDRESS} \
+    --bytecode=${WASM_PATH} \
+    --recall-nonce \
+    --pem=${WALLET_PEM} \
+    --gas-limit=600000000 \
+    --arguments ${PROXY_DEV_ADDRESS_HEX} \
+    --send \
+    --metadata-payable \
+    --outfile="deploy-devnet.interaction.json" \
+    --proxy=${PROXY} \
+    --chain=${CHAIN_ID} || return
+
+    echo ""
+    echo "Smart contract address: ${ADDRESS}"
+}
 
 issue_token() {
 
@@ -38,9 +56,9 @@ issue_token() {
 
     mxpy --verbose contract call ${ADDRESS} \
     --recall-nonce --pem=${WALLET_PEM} \
-    --gas-limit=500000000 --value=50000000000000000 \
-    --function="issue_token" \
-    --arguments ${TOKEN_DISPLAY_NAME} ${TOKEN_TICKER} \
+    --gas-limit=100000000 --value=50000000000000000 \
+    --function="issue_and_set_all_roles" \
+    --arguments ${TOKEN_DISPLAY_NAME} ${TOKEN_TICKER} 1\
     --send --proxy=${PROXY} --chain=${CHAIN_ID}
 }
 
@@ -55,7 +73,7 @@ register_or_renew() {
 
     local DOMAIN_NAME=0x6f776e65722e6d7678  
     local PERID=1
-    local UNIT=3  
+    local UNIT=4  
 
     mxpy --verbose contract call ${ADDRESS} \
     --recall-nonce --pem=${WALLET_PEM} \
@@ -122,5 +140,7 @@ getSubDomains() {
     --arguments ${DOMAIN_NAME} \
     --proxy=${PROXY}
 }
-
-deploy
+# deploy
+upgrade
+# issue_token
+# register_or_renew
