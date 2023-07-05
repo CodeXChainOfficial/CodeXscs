@@ -163,16 +163,16 @@ pub trait XnMain:
     fn register_sub_domain(&self, sub_domain: ManagedBuffer, address: ManagedAddress) {
         require!(self.is_owner(&sub_domain), "Not Allowed!");
 
-        // let primary_domain = self.get_primary_domain(&sub_domain).unwrap();
+        let primary_domain = self.get_primary_domain(&sub_domain).unwrap();
 
-        // let new_sub_domain = SubDomain {
-        //     name: sub_domain.clone(),
-        //     address: address.clone(),
-        // };
-        // let is_exist = self.sub_domains(&primary_domain).contains(&new_sub_domain);
-        // require!(!is_exist, "Already registered");
+        let new_sub_domain = SubDomain {
+            name: sub_domain.clone(),
+            address: address.clone(),
+        };
+        let is_exist = self.sub_domains(&primary_domain).contains(&new_sub_domain);
+        require!(!is_exist, "Already registered");
 
-        // self.get_egld_price_for_register_subdomain(sub_domain, address);
+        self.get_egld_price_for_register_subdomain(sub_domain, address);
 
         self.refund();
     }
