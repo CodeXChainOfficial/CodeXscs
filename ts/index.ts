@@ -1,5 +1,5 @@
 import { ApiNetworkProvider } from "@multiversx/sdk-network-providers"
-import { AbiRegistry, Address, Account, AddressValue, SmartContract, U64Value, BinaryCodec, ResultsParser, StringValue, ArrayVec, ArrayVecType, StructType, FieldDefinition, Field, StringType, AddressType, U64Type, Struct, ContractFunction, EnumValue, EnumType, U8Value, BigUIntType, TokenTransfer, TokenIdentifierType, OptionalValue } from "@multiversx/sdk-core";
+import { AbiRegistry, Address, Account, AddressValue, SmartContract, U64Value, BinaryCodec, ResultsParser, StringValue, ArrayVec, ArrayVecType, StructType, FieldDefinition, Field, StringType, AddressType, U64Type, Struct, ContractFunction, EnumValue, EnumType, U8Value, BigUIntType, TokenTransfer, TokenIdentifierType, OptionalValue, TokenIdentifierValue } from "@multiversx/sdk-core";
 import { UserSigner } from "@multiversx/sdk-wallet"; // md-ignore
 import { TransactionWatcher } from "@multiversx/sdk-core";
 import { promises } from "fs";
@@ -10,6 +10,7 @@ const networkProvider = new ApiNetworkProvider("https://devnet-api.multiversx.co
 
 const address = "erd1qqqqqqqqqqqqqpgqev7w2j8e54tvnzc2rtj6v7mxqdy5lam0vycseduvnh";
 const abi_path = "./xn-main.abi.json";
+const WEGLD = "WEGLD-d7c6bb";
 
 let signer: UserSigner;
 let contract: SmartContract;
@@ -76,18 +77,18 @@ const getDomainNftId = async () => {
 }
 
 const register = async () => {
-  let transaction = contract.call({
-    caller: signer.getAddress(),
-    func: new ContractFunction("register_or_renew"),
-    gasLimit: 50_000_000,
-    args: [
-      new StringValue("marko1.mvx"),
-      new U64Value(1),
-      new U8Value(4)
-    ],
-    chainID: "D",
-    value: 100_000
-  });
+  let transaction = contract.methodsExplicit.register_or_renew([
+    new StringValue("marko2.mvx"),
+    new U64Value(1),
+    new U8Value(4)
+  ])
+    .withSender(signer.getAddress())
+    .withSingleESDTTransfer(
+      TokenTransfer.fungibleFromAmount(WEGLD, 0.000_000_000_1, 18),
+    )
+    .withGasLimit(50_000_000)
+    .withChainID("D")
+    .buildTransaction();
 
   const account = new Account(signer.getAddress());
   const accountOnNetwork = await networkProvider.getAccount(signer.getAddress());
@@ -140,11 +141,11 @@ const setDomainProfile = async () => {
     new OptionalValue(textRecordsType, null),
     new OptionalValue(walletsType, null)
   ])
-  .withSender(signer.getAddress())
-  .withSingleESDTNFTTransfer(TokenTransfer.nonFungible(domain_nft_id, domain.nft_nonce))
-  .withGasLimit(50_000_000)
-  .withChainID("D")
-  .buildTransaction();
+    .withSender(signer.getAddress())
+    .withSingleESDTNFTTransfer(TokenTransfer.nonFungible(domain_nft_id, domain.nft_nonce))
+    .withGasLimit(50_000_000)
+    .withChainID("D")
+    .buildTransaction();
 
   const account = new Account(signer.getAddress());
   const accountOnNetwork = await networkProvider.getAccount(signer.getAddress());
@@ -162,19 +163,23 @@ const setDomainProfile = async () => {
 }
 
 const registerSubdomain = async () => {
-  const domain = await getDomain("marko1.mvx");
+  const domain = await getDomain("marko2.mvx");
   const domain_nft_id = await getDomainNftId();
 
+  console.log(new TokenIdentifierValue(WEGLD).toString());
+
   let transaction = contract.methodsExplicit.register_sub_domain([
-    new StringValue("www.marko1.mvx"),
+    new StringValue("www.marko2.mvx"),
     new AddressValue(signer.getAddress())
   ])
-  .withSender(signer.getAddress())
-  .withValue(10)
-  .withSingleESDTNFTTransfer(TokenTransfer.nonFungible(domain_nft_id, domain.nft_nonce))
-  .withGasLimit(50_000_000)
-  .withChainID("D")
-  .buildTransaction();
+    .withSender(signer.getAddress())
+    .withMultiESDTNFTTransfer([
+      TokenTransfer.fungibleFromAmount(WEGLD, 0.000_000_000_1, 18),
+      TokenTransfer.nonFungible(domain_nft_id, domain.nft_nonce)
+    ])
+    .withGasLimit(50_000_000)
+    .withChainID("D")
+    .buildTransaction();
 
   const account = new Account(signer.getAddress());
   const accountOnNetwork = await networkProvider.getAccount(signer.getAddress());
@@ -200,7 +205,7 @@ const main = async () => {
   // await register();
   // await setReservation();
   // await setDomainProfile();
-  // await registerSubdomain();
+  await registerSubdomain();
 }
 
 main();
