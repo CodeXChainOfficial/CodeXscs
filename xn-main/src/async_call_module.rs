@@ -20,7 +20,7 @@ pub trait AsyncCallModule:
         unit: PeriodType,
         assign_to: OptionalValue<ManagedAddress>,
     ) {
-        let payment = self.call_value().egld_value();
+        let payments = self.call_value().all_esdt_transfers();
         let caller = self.blockchain().get_caller();
 
         let _assign_to = match assign_to {
@@ -34,7 +34,7 @@ pub trait AsyncCallModule:
             BigUint::from(1_000_000_000_000_000_000u64),
             self.callbacks().register_or_renew_callback(
                 caller,
-                payment,
+                payments,
                 domain_name,
                 period,
                 unit,

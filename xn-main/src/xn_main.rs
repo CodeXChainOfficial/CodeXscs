@@ -15,7 +15,7 @@ pub mod storage_module;
 pub mod user_builtin;
 pub mod utils_module;
 
-use constant_module::{MIGRATION_PERIOD, NFT_AMOUNT, WEGLD_ID};
+use constant_module::{MIGRATION_PERIOD, NFT_AMOUNT};
 use data_module::{
     DomainName, DomainNameAttributes, PeriodType, Profile, RentalFee, Reservation, SocialMedia,
     SubDomain, TextRecord, Wallets,
@@ -81,7 +81,7 @@ pub trait XnMain:
         );
     }
 
-    #[payable("EGLD")]
+    #[payable("*")]
     #[endpoint]
     fn register_or_renew(
         &self,
@@ -100,7 +100,6 @@ pub trait XnMain:
         };
         require!(is_name_valid.is_ok(), is_name_valid_message);
 
-        // no subdomains
         let parts = self.split_domain_name(&domain_name);
         require!(parts.len() == 2, "You can only register domain names");
 
@@ -330,13 +329,6 @@ pub trait XnMain:
     #[only_owner]
     #[endpoint]
     fn fetch_egld_usd_prices(&self){
-        // let res = self.sync_get_equivalent(
-        //     self.oracle_address().get(),
-        //     TokenIdentifier::from_esdt_bytes(WEGLD_ID),
-        //     BigUint::from(1_000_000_000_000_000_000u64),
-        // );
-        // self.egld_usd_price().set(res.to_u64().unwrap());
-        // res
         self.internal_fetch_egld_usd_prices();
     }
 

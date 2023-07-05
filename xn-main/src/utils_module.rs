@@ -1,8 +1,8 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
-use crate::constant_module::NFT_AMOUNT;
 use crate::constant_module::{GRACE_PERIOD, MAX_LENGTH, MIN_LENGTH, YEAR_IN_SECONDS};
+use crate::constant_module::{NFT_AMOUNT, WEGLD_ID};
 use crate::user_builtin;
 
 #[allow(clippy::manual_range_contains)]
@@ -181,19 +181,33 @@ pub trait UtilsModule: crate::storage_module::StorageModule {
     fn refund(&self) {
         let caller = self.blockchain().get_caller();
         let payments = self.call_value().all_esdt_transfers();
-        self.refund_with_detail(caller, payments);
+        self.refund_with_payments(caller, payments);
     }
 
-    fn refund_with_detail(&self, caller: ManagedAddress, payments: ManagedVec<Self::Api, EsdtTokenPayment<Self::Api>>) {
+    fn refund_with_payments(
+        &self,
+        caller: ManagedAddress,
+        payments: ManagedVec<Self::Api, EsdtTokenPayment<Self::Api>>,
+    ) {
         let mut refund_payments = ManagedVec::new();
         for payment in payments.iter() {
-            if payment.token_identifier != EgldOrEsdtTokenIdentifier::egld() {
+            if payment.token_identifier != TokenIdentifier::from(WEGLD_ID) {
                 refund_payments.push(payment);
             }
         }
+        if refund_payments.len() > 0 {
+            self.send().direct_multi(&caller, &refund_payments);
+        }
+    }
 
-        self.send()
-            .direct_multi(&caller, &refund_payments);
+    fn refund_all(
+        &self,
+        caller: ManagedAddress,
+        payments: ManagedVec<Self::Api, EsdtTokenPayment<Self::Api>>,
+    ) {
+        if payments.len() > 0 {
+            self.send().direct_multi(&caller, &payments);
+        }
     }
 
     fn internal_update_primary_address(

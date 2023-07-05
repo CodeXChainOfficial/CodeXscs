@@ -1,9 +1,6 @@
-use crate::data_module::PeriodType;
-
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
-use crate::callback_module::CallbackProxy;
 mod xexchange_pair_proxy {
     use super::*;
 

@@ -1,7 +1,7 @@
 use crate::{
     constant_module::{
         DAY_IN_SECONDS, HOUR_IN_SECONDS, MIN_IN_SECONDS, MONTH_IN_SECONDS, SUB_DOMAIN_COST_USD,
-        YEAR_IN_SECONDS,
+        WEGLD_ID, YEAR_IN_SECONDS,
     },
     data_module::{DomainName, DomainNameAttributes, PeriodType, SubDomain},
 };
@@ -61,7 +61,7 @@ pub trait CallbackModule:
     fn register_or_renew_callback(
         &self,
         caller: ManagedAddress,
-        payment: BigUint,
+        payments: ManagedVec<Self::Api, EsdtTokenPayment<Self::Api>>,
         domain_name: ManagedBuffer,
         period: u8,
         unit: PeriodType,
@@ -71,6 +71,17 @@ pub trait CallbackModule:
         match result {
             ManagedAsyncCallResult::Ok(amount_out) => {
                 self.egld_usd_price().set(amount_out.to_u64().unwrap());
+
+                let mut egld_amount = BigUint::zero();
+                for payment in payments.iter() {
+                    if payment.clone().token_identifier.into_managed_buffer()
+                        == ManagedBuffer::from(WEGLD_ID)
+                    {
+                        egld_amount = payment.amount;
+                        break;
+                    }
+                }
+
                 let secs = [
                     YEAR_IN_SECONDS,
                     MONTH_IN_SECONDS,
@@ -81,7 +92,14 @@ pub trait CallbackModule:
                 let period_secs: u64 = u64::from(period) * secs[unit as usize];
 
                 let price = self.rent_price(&domain_name, &period_secs);
+
+                if price > egld_amount {
+                    self.refund_all(caller, payments);
+                    sc_panic!("Insufficient EGLD Funds {} {}", price.to_u64().unwrap(), egld_amount.to_u64().unwrap());
+                }
+
                 let since = self.blockchain().get_block_timestamp();
+
                 if !self.domain_name(&domain_name).is_empty() {
                     let mut domain_record = self.domain_name(&domain_name).get();
                     domain_record.expires_at = since + period_secs;
@@ -113,15 +131,18 @@ pub trait CallbackModule:
                         .set(new_domain_record.clone());
                 }
 
-                if price < payment {
-                    let excess = payment - price;
-                    self.send()
-                        .direct(&caller, &EgldOrEsdtTokenIdentifier::egld(), 0, &excess);
+                if price < egld_amount {
+                    let excess = egld_amount - price;
+                    self.send().direct(
+                        &caller,
+                        &EgldOrEsdtTokenIdentifier::esdt(TokenIdentifier::from(WEGLD_ID)),
+                        0,
+                        &excess,
+                    );
                 }
+                self.refund_with_payments(caller, payments);
             }
-            ManagedAsyncCallResult::Err(_) => {
-                self.egld_usd_price().set(11);
-            }
+            ManagedAsyncCallResult::Err(_) => {}
         }
     }
 
@@ -136,22 +157,26 @@ pub trait CallbackModule:
     ) {
         match result {
             ManagedAsyncCallResult::Ok(amount_out) => {
+                self.egld_usd_price().set(amount_out.to_u64().unwrap());
+
                 let mut egld_amount = BigUint::zero();
 
                 for payment in payments.iter() {
-                    if payment.token_identifier == EgldOrEsdtTokenIdentifier::egld() {
-                        let (_, _, amount) = payment.into_tuple();
-                        egld_amount = amount;
+                    if payment.clone().token_identifier.into_managed_buffer()
+                        == ManagedBuffer::from(WEGLD_ID)
+                    {
+                        egld_amount = payment.amount;
                         break;
                     }
                 }
 
-                self.egld_usd_price().set(amount_out.to_u64().unwrap());
-
                 let egld_usd_price = self.egld_usd_price().get();
-                let price_egld = BigUint::from(SUB_DOMAIN_COST_USD) / BigUint::from(egld_usd_price);
+                let price = BigUint::from(SUB_DOMAIN_COST_USD) / BigUint::from(egld_usd_price);
 
-                require!(price_egld <= egld_amount, "Insufficient EGLD Funds");
+                if price > egld_amount {
+                    self.refund_all(caller, payments);
+                    sc_panic!("Insufficient EGLD Funds {} {}", price.to_u64().unwrap(), egld_amount.to_u64().unwrap());
+                }
 
                 let primary_domain = self.get_primary_domain(&sub_domain).unwrap();
 
@@ -162,13 +187,17 @@ pub trait CallbackModule:
 
                 let _ = &mut self.sub_domains(&primary_domain).insert(new_sub_domain);
 
-                if price_egld < egld_amount {
-                    let excess = egld_amount - price_egld;
-                    self.send()
-                        .direct(&caller, &EgldOrEsdtTokenIdentifier::egld(), 0, &excess);
+                if price < egld_amount {
+                    let excess = egld_amount - price;
+                    self.send().direct(
+                        &caller,
+                        &EgldOrEsdtTokenIdentifier::esdt(TokenIdentifier::from(WEGLD_ID)),
+                        0,
+                        &excess,
+                    );
                 }
 
-                self.refund_with_detail(caller, payments);
+                self.refund_with_payments(caller, payments);
             }
             ManagedAsyncCallResult::Err(_) => {}
         }
