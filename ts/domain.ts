@@ -31,6 +31,7 @@ export let textRecordType = new StructType(
         new FieldDefinition("link", "", new StringType()),
     ]
 );
+export let textRecordsType = new ArrayVecType(1, textRecordType);
 
 export let walletsType = new StructType(
     "wallets",
@@ -41,8 +42,6 @@ export let walletsType = new StructType(
     ]
 );
 
-export let textRecordsType = new ArrayVecType(1, textRecordType);
-
 export let domainType = new StructType(
     "domain",
     [
@@ -51,16 +50,36 @@ export let domainType = new StructType(
         new FieldDefinition("nft_nonce", "", new U64Type()),
         new FieldDefinition("profile", "", new OptionType(profileType)),
         new FieldDefinition("social_media", "", new OptionType(socialType)),
-        new FieldDefinition("text_record", "", new OptionType(textRecordsType)),
         new FieldDefinition("wallets", "", new OptionType(walletsType)),
+        new FieldDefinition("text_record", "", new OptionType(textRecordsType)),
     ]
 );
 
 export const profileStruct = new Struct(profileType, [
     new Field(new StringValue("Marko"), "name"),
     new Field(new StringValue("avatar"), "avatar"),
-    new Field(new StringValue("S"), "location"),
-    new Field(new StringValue("Https://facebook.io"), "website"),
+    new Field(new StringValue("Serbia"), "location"),
+    new Field(new StringValue("https://facebook.io"), "website"),
     new Field(new StringValue("Dev"), "shortbio"),
+]);
 
+export const socialStruct = new Struct(socialType, [
+    new Field(new StringValue("https://telegram.com/marko"), "telegram"),
+    new Field(new StringValue("https://discord.com/marko"), "discord"),
+    new Field(new StringValue("https://twitter.com/marko"), "twitter"),
+    new Field(new StringValue("https://medium.io/marko"), "medium"),
+    new Field(new StringValue("https://facebook.io"), "facebook"),
+    new Field(new StringValue("https://sample.dev.io/marko"), "other_link"),
+]);
+
+export const textRecord1 = new Struct(textRecordType, [
+    new Field(new StringValue("name_value"), "name_value"),
+    new Field(new StringValue("https://discord.com/marko"), "link"),
+]);
+export const textRecords = new ArrayVec(textRecordsType, [textRecord1]);
+
+export const walletStruct = new Struct(walletsType, [
+    new Field(new StringValue("erd1jk8tetypqufjwkydyvk0gcta9wnqjxh05krnedhv4yf52pwgvycs5k6lsr"), "egld"),
+    new Field(new StringValue("erd1jk8tetypqufjwkydyvk0gcta9wnqjxh05krnedhv4yf52pwgvycs5k6lsr"), "btc"),
+    new Field(new StringValue("erd1jk8tetypqufjwkydyvk0gcta9wnqjxh05krnedhv4yf52pwgvycs5k6lsr"), "eth")
 ]);
