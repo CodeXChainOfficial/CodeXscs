@@ -1,6 +1,7 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
+use crate::constant_module::MAX_TEXTRECORD;
 #[derive(
   ManagedVecItem, NestedEncode, NestedDecode, TopEncode, TopDecode, Clone, TypeAbi, Default,
 )]
@@ -55,14 +56,14 @@ pub struct Wallets<M: ManagedTypeApi> {
 #[derive(
   ManagedVecItem, NestedEncode, NestedDecode, TopEncode, TopDecode, Clone, TypeAbi, Default,
 )]
-pub struct DomainName<M: ManagedTypeApi> {
+pub struct Domain<M: ManagedTypeApi> {
   pub name: ManagedBuffer<M>,
   pub expires_at: u64,
   pub nft_nonce: u64,
   pub profile: Option<Profile<M>>,
   pub social_media: Option<SocialMedia<M>>,
+  pub wallets: Option<Wallets<M>>,
   pub text_record: Option<ManagedVec<M, TextRecord<M>>>,
-  pub wallets: Option<Wallets<M>>
 }
 
 #[derive(
@@ -77,7 +78,7 @@ pub struct DomainNameAttributes {
   ManagedVecItem, NestedEncode, NestedDecode, TopEncode, TopDecode, Clone, TypeAbi, Default,
 )]
 pub struct AcceptRequest<M: ManagedTypeApi> {
-  pub domain_name: DomainName<M>,
+  pub domain_name: Domain<M>,
   pub until: u64,
 }
 

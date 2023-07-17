@@ -22,7 +22,7 @@ pub trait StorageModule {
 
   #[view(get_domain_name)]
   #[storage_mapper("domain_name")]
-  fn domain_name(&self, domain_name: &ManagedBuffer) -> SingleValueMapper<DomainName<Self::Api>>;
+  fn domain(&self, domain_name: &ManagedBuffer) -> SingleValueMapper<Domain<Self::Api>>;
 
   #[view(get_sub_domains)]
   #[storage_mapper("sub_domains")]

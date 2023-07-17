@@ -3,7 +3,7 @@ use crate::{
         DAY_IN_SECONDS, HOUR_IN_SECONDS, MIN_IN_SECONDS, MONTH_IN_SECONDS, SUB_DOMAIN_COST_USD,
         WEGLD_ID, YEAR_IN_SECONDS,
     },
-    data_module::{DomainName, DomainNameAttributes, PeriodType, SubDomain},
+    data_module::{Domain, DomainNameAttributes, PeriodType, SubDomain},
 };
 
 multiversx_sc::imports!();
@@ -100,10 +100,10 @@ pub trait CallbackModule:
 
                 let since = self.blockchain().get_block_timestamp();
 
-                if !self.domain_name(&domain_name).is_empty() {
-                    let mut domain_record = self.domain_name(&domain_name).get();
+                if !self.domain(&domain_name).is_empty() {
+                    let mut domain_record = self.domain(&domain_name).get();
                     domain_record.expires_at = since + period_secs;
-                    self.domain_name(&domain_name).set(domain_record.clone());
+                    self.domain(&domain_name).set(domain_record.clone());
                 } else {
                     let attributes = DomainNameAttributes {
                         expires_at: since + period_secs,
@@ -117,17 +117,17 @@ pub trait CallbackModule:
                             nft_nonce = self.mint_nft(&caller, &domain_name, &price, &attributes);
                         }
                     }
-                    let new_domain_record = DomainName {
+                    let new_domain_record = Domain {
                         name: domain_name.clone(),
                         expires_at: attributes.expires_at,
                         nft_nonce,
                         profile: Option::None,
                         social_media: Option::None,
-                        text_record: Option::None,
                         wallets: Option::None,
+                        text_record: Option::None,
                     };
 
-                    self.domain_name(&domain_name)
+                    self.domain(&domain_name)
                         .set(new_domain_record.clone());
                 }
 
@@ -142,7 +142,9 @@ pub trait CallbackModule:
                 }
                 self.refund_with_payments(caller, payments);
             }
-            ManagedAsyncCallResult::Err(_) => {}
+            ManagedAsyncCallResult::Err(_) => {
+                
+            }
         }
     }
 

@@ -142,10 +142,10 @@ pub trait UtilsModule: crate::storage_module::StorageModule {
             }
         }
 
-        if self.domain_name(&domain_name).is_empty() {
+        if self.domain(&domain_name).is_empty() {
             return true;
         } else if self.get_current_time()
-            >= self.domain_name(&domain_name).get().expires_at + GRACE_PERIOD
+            >= self.domain(&domain_name).get().expires_at + GRACE_PERIOD
         {
             return true;
         }
@@ -170,7 +170,7 @@ pub trait UtilsModule: crate::storage_module::StorageModule {
 
         for payment in payments.iter() {
             if &payment.token_identifier == self.domain_nft().get_token_id_ref()
-                && payment.token_nonce == self.domain_name(&primary_domain).get().nft_nonce
+                && payment.token_nonce == self.domain(&primary_domain).get().nft_nonce
             {
                 return true;
             }
@@ -218,7 +218,7 @@ pub trait UtilsModule: crate::storage_module::StorageModule {
         let caller = self.blockchain().get_caller();
         require!(self.is_owner(domain_name), "Not allowed");
 
-        let domain_record = self.domain_name(&domain_name).get();
+        let domain_mapper = self.domain(&domain_name).get();
 
         let domain_nft = self.domain_nft();
         let token_id = domain_nft.get_token_id_ref();
@@ -229,7 +229,7 @@ pub trait UtilsModule: crate::storage_module::StorageModule {
                     self.send().direct_esdt(
                         &address,
                         token_id,
-                        domain_record.nft_nonce,
+                        domain_mapper.nft_nonce,
                         &BigUint::from(NFT_AMOUNT),
                     );
                 }

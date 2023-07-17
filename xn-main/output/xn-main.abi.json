@@ -1,11 +1,11 @@
 {
     "buildInfo": {
         "rustc": {
-            "version": "1.72.0-nightly",
-            "commitHash": "5bd28f5eac1ba3569bfa8d49ec3f5acbdfdff7a0",
-            "commitDate": "2023-06-28",
+            "version": "1.73.0-nightly",
+            "commitHash": "0e8e857b11f60a785aea24a84f280f6dad7a4d42",
+            "commitDate": "2023-07-16",
             "channel": "Nightly",
-            "short": "rustc 1.72.0-nightly (5bd28f5ea 2023-06-28)"
+            "short": "rustc 1.73.0-nightly (0e8e857b1 2023-07-16)"
         },
         "contractCrate": {
             "name": "xn-main",
@@ -78,7 +78,7 @@
             "outputs": []
         },
         {
-            "name": "update_domain_profile",
+            "name": "update_domain_overview",
             "mutability": "mutable",
             "payableInTokens": [
                 "*"
@@ -90,23 +90,43 @@
                 },
                 {
                     "name": "profile",
-                    "type": "optional<Profile>",
-                    "multi_arg": true
+                    "type": "Profile"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "update_domain_socials",
+            "mutability": "mutable",
+            "payableInTokens": [
+                "*"
+            ],
+            "inputs": [
+                {
+                    "name": "domain_name",
+                    "type": "bytes"
                 },
                 {
-                    "name": "social_media",
-                    "type": "optional<SocialMedia>",
-                    "multi_arg": true
-                },
+                    "name": "socials",
+                    "type": "SocialMedia"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "update_domain_wallets",
+            "mutability": "mutable",
+            "payableInTokens": [
+                "*"
+            ],
+            "inputs": [
                 {
-                    "name": "text_record",
-                    "type": "optional<List<TextRecord>>",
-                    "multi_arg": true
+                    "name": "domain_name",
+                    "type": "bytes"
                 },
                 {
                     "name": "wallets",
-                    "type": "optional<Wallets>",
-                    "multi_arg": true
+                    "type": "Wallets"
                 }
             ],
             "outputs": []
@@ -326,7 +346,7 @@
             ],
             "outputs": [
                 {
-                    "type": "DomainName"
+                    "type": "Domain"
                 }
             ]
         },
@@ -450,7 +470,7 @@
     "events": [],
     "hasCallback": true,
     "types": {
-        "DomainName": {
+        "Domain": {
             "type": "struct",
             "fields": [
                 {
@@ -474,12 +494,12 @@
                     "type": "Option<SocialMedia>"
                 },
                 {
-                    "name": "text_record",
-                    "type": "Option<List<TextRecord>>"
-                },
-                {
                     "name": "wallets",
                     "type": "Option<Wallets>"
+                },
+                {
+                    "name": "text_record",
+                    "type": "Option<List<TextRecord>>"
                 }
             ]
         },
