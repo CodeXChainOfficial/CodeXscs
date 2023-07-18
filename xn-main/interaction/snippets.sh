@@ -141,6 +141,6 @@ getSubDomains() {
     --proxy=${PROXY}
 }
 # deploy
-upgrade
 # issue_token
+upgrade
 # register_or_renew

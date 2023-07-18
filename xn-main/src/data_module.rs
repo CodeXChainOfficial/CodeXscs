@@ -36,9 +36,7 @@ pub struct SocialMedia<M: ManagedTypeApi> {
   pub other_link: ManagedBuffer<M>,
 }
 
-#[derive(
-  ManagedVecItem, NestedEncode, NestedDecode, TopEncode, TopDecode, Clone, TypeAbi, Default,
-)]
+#[derive(ManagedVecItem, TopEncode, TopDecode, NestedEncode, NestedDecode, TypeAbi, Clone)]
 pub struct TextRecord<M: ManagedTypeApi> {
   pub name_value: ManagedBuffer<M>,
   pub link: ManagedBuffer<M>,

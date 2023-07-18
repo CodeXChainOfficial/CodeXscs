@@ -110,17 +110,34 @@ pub trait XnMain:
 
         self.get_egld_price_for_register(domain_name, period, unit, assign_to);
     }
-
     #[payable("*")]
     #[endpoint]
-    fn update_domain_overview(&self, domain_name: ManagedBuffer, profile: Profile<Self::Api>) {
+    fn update_domain_overview(
+        &self,
+        domain_name: ManagedBuffer,
+        args: MultiValue5<
+            ManagedBuffer,
+            ManagedBuffer,
+            ManagedBuffer,
+            ManagedBuffer,
+            ManagedBuffer,
+        >,
+    ) {
         require!(self.is_owner(&domain_name), "Not allowed");
 
         let domain_record_exists = !self.domain(&domain_name).is_empty();
         require!(domain_record_exists, "Domain not exist");
 
         let mut domain = self.domain(&domain_name).get();
-        domain.profile = Some(profile);
+
+        let (name, avatar, location, website, shortbio) = args.into_tuple();
+        domain.profile = Some(Profile {
+            name,
+            avatar,
+            location,
+            website,
+            shortbio,
+        });
         self.domain(&domain_name).set(&domain);
 
         self.refund();
@@ -128,14 +145,34 @@ pub trait XnMain:
 
     #[payable("*")]
     #[endpoint]
-    fn update_domain_socials(&self, domain_name: ManagedBuffer, socials: SocialMedia<Self::Api>) {
+    fn update_domain_socials(
+        &self,
+        domain_name: ManagedBuffer,
+        args: MultiValue6<
+            ManagedBuffer,
+            ManagedBuffer,
+            ManagedBuffer,
+            ManagedBuffer,
+            ManagedBuffer,
+            ManagedBuffer,
+        >,
+    ) {
         require!(self.is_owner(&domain_name), "Not allowed");
 
         let domain_record_exists = !self.domain(&domain_name).is_empty();
         require!(domain_record_exists, "Domain not exist");
 
         let mut domain = self.domain(&domain_name).get();
-        domain.social_media = Some(socials);
+
+        let (telegram, discord, twitter, medium, facebook, other_link) = args.into_tuple();
+        domain.social_media = Some(SocialMedia {
+            telegram,
+            discord,
+            twitter,
+            medium,
+            facebook,
+            other_link,
+        });
         self.domain(&domain_name).set(&domain);
 
         self.refund();
@@ -143,41 +180,46 @@ pub trait XnMain:
 
     #[payable("*")]
     #[endpoint]
-    fn update_domain_wallets(&self, domain_name: ManagedBuffer, wallets: Wallets<Self::Api>) {
+    fn update_domain_wallets(
+        &self,
+        domain_name: ManagedBuffer,
+        args: MultiValue3<ManagedBuffer, ManagedBuffer, ManagedBuffer>,
+    ) {
         require!(self.is_owner(&domain_name), "Not allowed");
 
         let domain_record_exists = !self.domain(&domain_name).is_empty();
         require!(domain_record_exists, "Domain not exist");
 
         let mut domain = self.domain(&domain_name).get();
-        domain.wallets = Some(wallets);
+        let (egld, btc, eth) = args.into_tuple();
+        domain.wallets = Some(Wallets { egld, btc, eth });
         self.domain(&domain_name).set(&domain);
 
         self.refund();
     }
 
-    // #[payable("*")]
-    // #[endpoint]
-    // fn update_domain_textrecord(
-    //     &self,
-    //     domain_name: ManagedBuffer,
-    //     text_record: ManagedVec<TextRecord<Self::Api>>,
-    // ) {
-    //     require!(self.is_owner(&domain_name), "Not allowed",);
+    #[payable("*")]
+    #[endpoint]
+    fn update_domain_textrecord(
+        &self,
+        domain_name: ManagedBuffer,
+        text_record: MultiValueManagedVec<TextRecord<Self::Api>>,
+    ) {
+        require!(self.is_owner(&domain_name), "Not allowed",);
 
-    //     let domain_record_exists = !self.domain(&domain_name).is_empty();
-    //     require!(domain_record_exists, "Domain not exist");
+        let domain_record_exists = !self.domain(&domain_name).is_empty();
+        require!(domain_record_exists, "Domain not exist");
 
-    //     let mut domain = self.domain(&domain_name).get();
+        let mut domain = self.domain(&domain_name).get();
+        let mut records = ManagedVec::new();
+        for record in text_record.iter() {
+            records.push(record);
+        }
+        domain.text_record = Some(records);
+        self.domain(&domain_name).set(&domain);
 
-    //     domain.text_record.clear();
-    //     for record in text_record.iter(){
-    //         domain.text_record.push(record);
-    //     }
-    //     self.domain(&domain_name).set(&domain);
-
-    //     self.refund();
-    // }
+        self.refund();
+    }
 
     #[payable("ESDT")]
     #[endpoint]
@@ -248,8 +290,7 @@ pub trait XnMain:
             text_record: Option::None,
         };
 
-        self.domain(&new_domain_name)
-            .set(new_domain_record.clone());
+        self.domain(&new_domain_name).set(new_domain_record.clone());
         self.reservations(&new_domain_name).clear();
     }
 
@@ -285,10 +326,7 @@ pub trait XnMain:
 
         require!(&caller != &new_owner, "can't transfer domain");
         require!(!domain_mapper.is_empty(), "wrong domain name");
-        require!(
-            domain_mapper.get().nft_nonce == token_nonce,
-            "Not Allowed!"
-        );
+        require!(domain_mapper.get().nft_nonce == token_nonce, "Not Allowed!");
         require!(!nft_token_id_mapper.is_empty(), "Token not issued!");
         require!(
             &token_id == self.domain_nft().get_token_id_ref()

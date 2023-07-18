@@ -1,4 +1,5 @@
-import { AbiRegistry, Address, Account, AddressValue, SmartContract, U64Value, BinaryCodec, ResultsParser, StringValue, ArrayVec, ArrayVecType, StructType, FieldDefinition, Field, StringType, AddressType, U64Type, Struct, ContractFunction, EnumValue, EnumType, U8Value, OptionType } from "@multiversx/sdk-core";
+import { AbiRegistry, Address, Account, AddressValue, SmartContract, U64Value, BinaryCodec, ResultsParser, StringValue, ArrayVec, ArrayVecType, StructType, FieldDefinition, Field, StringType, AddressType, U64Type, Struct, ContractFunction, EnumValue, EnumType, U8Value, OptionType, CompositeType } from "@multiversx/sdk-core";
+
 
 export let profileType = new StructType(
     "profile",
@@ -76,7 +77,6 @@ export const textRecord1 = new Struct(textRecordType, [
     new Field(new StringValue("name_value"), "name_value"),
     new Field(new StringValue("https://discord.com/marko"), "link"),
 ]);
-export const textRecords = new ArrayVec(textRecordsType, [textRecord1]);
 
 export const walletStruct = new Struct(walletsType, [
     new Field(new StringValue("erd1jk8tetypqufjwkydyvk0gcta9wnqjxh05krnedhv4yf52pwgvycs5k6lsr"), "egld"),

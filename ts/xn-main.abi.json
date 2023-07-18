@@ -89,8 +89,9 @@
                     "type": "bytes"
                 },
                 {
-                    "name": "profile",
-                    "type": "Profile"
+                    "name": "args",
+                    "type": "multi<bytes,bytes,bytes,bytes,bytes>",
+                    "multi_arg": true
                 }
             ],
             "outputs": []
@@ -107,8 +108,9 @@
                     "type": "bytes"
                 },
                 {
-                    "name": "socials",
-                    "type": "SocialMedia"
+                    "name": "args",
+                    "type": "multi<bytes,bytes,bytes,bytes,bytes,bytes>",
+                    "multi_arg": true
                 }
             ],
             "outputs": []
@@ -125,8 +127,28 @@
                     "type": "bytes"
                 },
                 {
-                    "name": "wallets",
-                    "type": "Wallets"
+                    "name": "args",
+                    "type": "multi<bytes,bytes,bytes>",
+                    "multi_arg": true
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "update_domain_textrecord",
+            "mutability": "mutable",
+            "payableInTokens": [
+                "*"
+            ],
+            "inputs": [
+                {
+                    "name": "domain_name",
+                    "type": "bytes"
+                },
+                {
+                    "name": "text_record",
+                    "type": "variadic<TextRecord>",
+                    "multi_arg": true
                 }
             ],
             "outputs": []

@@ -1,14 +1,14 @@
 import { ApiNetworkProvider } from "@multiversx/sdk-network-providers"
-import { AbiRegistry, Address, Account, AddressValue, SmartContract, U64Value, BinaryCodec, ResultsParser, StringValue, ArrayVec, ArrayVecType, StructType, FieldDefinition, Field, StringType, AddressType, U64Type, Struct, ContractFunction, EnumValue, EnumType, U8Value, BigUIntType, TokenTransfer, TokenIdentifierType, OptionalValue, TokenIdentifierValue } from "@multiversx/sdk-core";
+import { AbiRegistry, Address, Account, AddressValue, SmartContract, U64Value, BinaryCodec, ResultsParser, StringValue, StringType, ContractFunction, U8Value, BigUIntType, TokenTransfer, TokenIdentifierType, TokenIdentifierValue, CompositeValue, CompositeType, VariadicType, VariadicValue } from "@multiversx/sdk-core";
 import { UserSigner } from "@multiversx/sdk-wallet"; // md-ignore
 import { TransactionWatcher } from "@multiversx/sdk-core";
 import { promises } from "fs";
 import { getReservations } from "./reservation";
-import { domainType, profileStruct, socialStruct, textRecords, socialType, textRecordsType, walletsType, walletStruct, profileType } from "./domain";
+import { domainType, textRecordsType, textRecord1 } from "./domain";
 
 const networkProvider = new ApiNetworkProvider("https://devnet-api.multiversx.com", { timeout: 1_000_000_000 });
 
-const address = "erd1qqqqqqqqqqqqqpgq2k3ektxyglrk563zyq8u9hhmmwyekd5zvycsrv5h8n";
+const address = "erd1qqqqqqqqqqqqqpgqt749pt54sd9vzv52gl3mpqtvp47pk37hvycsasp2gu";
 const abi_path = "./xn-main.abi.json";
 const WEGLD = "WEGLD-d7c6bb";
 const domain1 = "marko1.mvx";
@@ -18,17 +18,18 @@ const subdomain1 = "www.marko1.mvx";
 let signer: UserSigner;
 let other: UserSigner;
 let contract: SmartContract;
+let abiRegistry: AbiRegistry;
 
 const setEnv = async () => {
   let pemText = await promises.readFile("./walletKey.pem", { encoding: "utf8" });
   signer = UserSigner.fromPem(pemText);
-  
+
   pemText = await promises.readFile("./otherKey.pem", { encoding: "utf8" });
   other = UserSigner.fromPem(pemText);
 
   let abiJson = await promises.readFile(abi_path, { encoding: "utf8" });
-  let abiObj = JSON.parse(abiJson);
-  const abiRegistry = AbiRegistry.create(abiObj)
+  const abiObj = JSON.parse(abiJson);
+  abiRegistry = AbiRegistry.create(abiObj)
 
   contract = new SmartContract({
     address: new Address(address),
@@ -43,6 +44,11 @@ const getDomain = async (domain: string) => {
   });
 
   let queryResponse = await networkProvider.queryContract(query);
+
+  const getDomainNameEndpoint = abiRegistry.getEndpoint("get_domain_name");
+  let { values } = new ResultsParser().parseQueryResponse(queryResponse, getDomainNameEndpoint);
+  console.log((values[0] as any).fields[3].value);
+
   let bundle = new ResultsParser().parseUntypedQueryResponse(queryResponse);
   let firstValue = bundle.values[0];
   let decodedValue = new BinaryCodec().decodeTopLevel(firstValue, domainType);
@@ -161,13 +167,21 @@ const setReservation = async () => {
   console.log(JSON.stringify(transactionOnNetwork))
 }
 
+
 const setDomainProfileOverview = async () => {
   const domain = await getDomain(domain1);
   const domain_nft_id = await getDomainNftId();
 
-  let transaction = contract.methodsExplicit.update_domain_overview([
+  const compositeType = new CompositeType(new StringType, new StringType, new StringType, new StringType, new StringType);
+  let transaction = contract.methodsExplicit.update_domain_overview_multivalue([
     new StringValue(domain1),
-    profileStruct,
+    new CompositeValue(compositeType, [
+      new StringValue("marko"),
+      new StringValue("location"),
+      new StringValue("website"),
+      new StringValue("shortbio"),
+      new StringValue("www")
+    ])
   ])
     .withSender(signer.getAddress())
     .withSingleESDTNFTTransfer(TokenTransfer.nonFungible(domain_nft_id, domain.nft_nonce))
@@ -194,9 +208,18 @@ const setDomainProfileSocial = async () => {
   const domain = await getDomain(domain1);
   const domain_nft_id = await getDomainNftId();
 
+  const compositeType = new CompositeType(new StringType, new StringType, new StringType, new StringType, new StringType, new StringType);
+
   let transaction = contract.methodsExplicit.update_domain_socials([
     new StringValue(domain1),
-    socialStruct,
+    new CompositeValue(compositeType, [
+      new StringValue("telegram"),
+      new StringValue("discord"),
+      new StringValue("twitter"),
+      new StringValue("medium"),
+      new StringValue("facebook"),
+      new StringValue("other_link")
+    ]),
   ])
     .withSender(signer.getAddress())
     .withSingleESDTNFTTransfer(TokenTransfer.nonFungible(domain_nft_id, domain.nft_nonce))
@@ -223,9 +246,45 @@ const setDomainProfileWallets = async () => {
   const domain = await getDomain(domain1);
   const domain_nft_id = await getDomainNftId();
 
+  const compositeType = new CompositeType(new StringType, new StringType, new StringType);
+
   let transaction = contract.methodsExplicit.update_domain_wallets([
     new StringValue(domain1),
-    walletStruct,
+    new CompositeValue(compositeType, [
+      new StringValue("egld"),
+      new StringValue("btc"),
+      new StringValue("eth"),
+    ])
+  ])
+    .withSender(signer.getAddress())
+    .withSingleESDTNFTTransfer(TokenTransfer.nonFungible(domain_nft_id, domain.nft_nonce))
+    .withGasLimit(50_000_000)
+    .withChainID("D")
+    .buildTransaction();
+
+  const account = new Account(signer.getAddress());
+  const accountOnNetwork = await networkProvider.getAccount(signer.getAddress());
+  account.update(accountOnNetwork);
+  transaction.setNonce(account.getNonceThenIncrement());
+
+  const serializedTransaction = transaction.serializeForSigning();
+  const transactionSignature = await signer.sign(serializedTransaction);
+  transaction.applySignature(transactionSignature);
+
+  await networkProvider.sendTransaction(transaction);
+  let transactionOnNetwork = await new TransactionWatcher(networkProvider).awaitCompleted(transaction);
+
+  console.log(JSON.stringify(transactionOnNetwork))
+}
+
+const setDomainProfileTextRecords = async () => {
+  const domain = await getDomain(domain1);
+  const domain_nft_id = await getDomainNftId();
+
+  let variadicType = new VariadicType(textRecordsType);
+  let transaction = contract.methodsExplicit.update_domain_textrecord([
+    new StringValue(domain1),
+    new VariadicValue(variadicType, [textRecord1]),
   ])
     .withSender(signer.getAddress())
     .withSingleESDTNFTTransfer(TokenTransfer.nonFungible(domain_nft_id, domain.nft_nonce))
@@ -342,25 +401,21 @@ const updatePrimaryDomain = async () => {
 
 const main = async () => {
   await setEnv();
-  await getDomain(domain1);
+  // await getDomain(domain1);
   await getEgldPrice();
   await getDomainNftId();
 
   // await setEgldPrice();
-
   // await register();
-
   // await setReservation();
-
+  // await setDomainProfileOverview();
   // await setDomainProfileOverview();
   // await setDomainProfileSocial();
   // await setDomainProfileWallets();
-
+  // await setDomainProfileTextRecords();
   // await registerSubdomain();
-
   // await transferDomain();
-
-  await updatePrimaryDomain();
+  // await updatePrimaryDomain();
 }
 
 main();
