@@ -4,11 +4,11 @@ import { UserSigner } from "@multiversx/sdk-wallet"; // md-ignore
 import { TransactionWatcher } from "@multiversx/sdk-core";
 import { promises } from "fs";
 import { getReservations } from "./reservation";
-import { domainType, textRecordsType, textRecord1 } from "./domain";
+import { domainType, textRecordsType, textRecord1, textRecordType, textRecord2 } from "./domain";
 
 const networkProvider = new ApiNetworkProvider("https://devnet-api.multiversx.com", { timeout: 1_000_000_000 });
 
-const address = "erd1qqqqqqqqqqqqqpgqt749pt54sd9vzv52gl3mpqtvp47pk37hvycsasp2gu";
+const address = "erd1qqqqqqqqqqqqqpgqm2y7angkuyew964jah77s20es9h3u55evycszs3hgn";
 const abi_path = "./xn-main.abi.json";
 const WEGLD = "WEGLD-d7c6bb";
 const domain1 = "marko1.mvx";
@@ -39,25 +39,58 @@ const setEnv = async () => {
 
 const getDomain = async (domain: string) => {
   let query = contract.createQuery({
-    func: new ContractFunction("get_domain_name"),
+    func: new ContractFunction("get_domain"),
     args: [new StringValue(domain)]
   });
 
   let queryResponse = await networkProvider.queryContract(query);
 
-  const getDomainNameEndpoint = abiRegistry.getEndpoint("get_domain_name");
-  let { values } = new ResultsParser().parseQueryResponse(queryResponse, getDomainNameEndpoint);
-  console.log((values[0] as any).fields[3].value);
+  //==============================
+  //   const getDomainNameEndpoint = abiRegistry.getEndpoint("get_domain_name");
+  //   let { values } = new ResultsParser().parseQueryResponse(queryResponse, getDomainNameEndpoint);
+  //   console.log((values[0] as any).fields[6]);
 
+  //=====================================
   let bundle = new ResultsParser().parseUntypedQueryResponse(queryResponse);
   let firstValue = bundle.values[0];
-  let decodedValue = new BinaryCodec().decodeTopLevel(firstValue, domainType);
 
-  console.log(bundle.returnCode);
-  console.log(bundle.returnMessage);
-  console.log(bundle.values);
+  // const codec = new BinaryCodec();
+  // const domainType = abiRegistry.getStruct("Domain");
+  // const data = Buffer.from(firstValue);
+  // const [decoded, decodedLength] = codec.decodeNested(data, domainType);
+  // const decodedDomain = decoded.valueOf();
+  // console.log(decodedDomain);
+
+  let decodedValue = new BinaryCodec().decodeTopLevel(firstValue, domainType);
   console.log(decodedValue.valueOf());
   return decodedValue.valueOf()
+}
+
+
+const getSubDomains = async (domain: string) => {
+  let query = contract.createQuery({
+    func: new ContractFunction("get_sub_domains"),
+    args: [new StringValue(domain)]
+  });
+
+  let queryResponse = await networkProvider.queryContract(query);
+  const getDomainNameEndpoint = abiRegistry.getEndpoint("get_sub_domains");
+  let { values } = new ResultsParser().parseQueryResponse(queryResponse, getDomainNameEndpoint);
+  console.log((values[0] as any).items[0].items[0].value.toString());
+}
+
+const getMainDomain = async (domain: string) => {
+  let query = contract.createQuery({
+    func: new ContractFunction("get_main_domain"),
+    args: [new AddressValue(signer.getAddress())]
+  });
+
+  let queryResponse = await networkProvider.queryContract(query);
+  let bundle = new ResultsParser().parseUntypedQueryResponse(queryResponse);
+  let firstValue = bundle.values[0];
+  let decodedValue = new BinaryCodec().decodeTopLevel(firstValue, new StringType());
+
+  console.log(decodedValue.valueOf());
 }
 
 const getEgldPrice = async () => {
@@ -173,14 +206,14 @@ const setDomainProfileOverview = async () => {
   const domain_nft_id = await getDomainNftId();
 
   const compositeType = new CompositeType(new StringType, new StringType, new StringType, new StringType, new StringType);
-  let transaction = contract.methodsExplicit.update_domain_overview_multivalue([
+  let transaction = contract.methodsExplicit.update_domain_overview([
     new StringValue(domain1),
     new CompositeValue(compositeType, [
       new StringValue("marko"),
+      new StringValue("avatar"),
       new StringValue("location"),
       new StringValue("website"),
       new StringValue("shortbio"),
-      new StringValue("www")
     ])
   ])
     .withSender(signer.getAddress())
@@ -281,10 +314,12 @@ const setDomainProfileTextRecords = async () => {
   const domain = await getDomain(domain1);
   const domain_nft_id = await getDomainNftId();
 
-  let variadicType = new VariadicType(textRecordsType);
+  console.log(textRecord1.valueOf());
+
+  let variadicType = new VariadicType(textRecordType);
   let transaction = contract.methodsExplicit.update_domain_textrecord([
     new StringValue(domain1),
-    new VariadicValue(variadicType, [textRecord1]),
+    new VariadicValue(variadicType, [textRecord1, textRecord2]),
   ])
     .withSender(signer.getAddress())
     .withSingleESDTNFTTransfer(TokenTransfer.nonFungible(domain_nft_id, domain.nft_nonce))
@@ -378,19 +413,19 @@ const updatePrimaryDomain = async () => {
   let transaction = contract.methodsExplicit.update_primary_address([
     new StringValue(domain1),
   ])
-    .withSender(signer.getAddress())
+    .withSender(other.getAddress())
     .withSingleESDTNFTTransfer(TokenTransfer.nonFungible(domain_nft_id, domain.nft_nonce))
     .withGasLimit(50_000_000)
     .withChainID("D")
     .buildTransaction();
 
-  const account = new Account(signer.getAddress());
-  const accountOnNetwork = await networkProvider.getAccount(signer.getAddress());
+  const account = new Account(other.getAddress());
+  const accountOnNetwork = await networkProvider.getAccount(other.getAddress());
   account.update(accountOnNetwork);
   transaction.setNonce(account.getNonceThenIncrement());
 
   const serializedTransaction = transaction.serializeForSigning();
-  const transactionSignature = await signer.sign(serializedTransaction);
+  const transactionSignature = await other.sign(serializedTransaction);
   transaction.applySignature(transactionSignature);
 
   await networkProvider.sendTransaction(transaction);
@@ -404,11 +439,11 @@ const main = async () => {
   // await getDomain(domain1);
   await getEgldPrice();
   await getDomainNftId();
-
+  // await getSubDomains(domain1);
+  
   // await setEgldPrice();
   // await register();
   // await setReservation();
-  // await setDomainProfileOverview();
   // await setDomainProfileOverview();
   // await setDomainProfileSocial();
   // await setDomainProfileWallets();

@@ -39,17 +39,6 @@ pub trait PriceOracleModule:
         amount_in: BigUint,
         callback: CallbackClosure<Self::Api>,
     ) {
-        // let mut args = ManagedVec::new();
-        // args.push(token_in.into_managed_buffer());
-        // args.push(amount_in.to_bytes_be_buffer());
-
-        // self.send()
-        //     .contract_call::<()>(sc_address, ManagedBuffer::from("get_equivalent"))
-        //     .with_raw_arguments(args.into())
-        //     .async_call()
-        //     .with_callback(callback)
-        //     .call_and_exit()
-        
         self.xexchange_pair_contract(sc_address)
             .get_equivalent(token_in, amount_in)
             .async_call()

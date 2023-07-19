@@ -16,21 +16,17 @@ pub trait StorageModule {
   #[storage_mapper("domainNFT")]
   fn domain_nft(&self) -> NonFungibleTokenMapper;
 
-  #[view(get_accept_request)]
-  #[storage_mapper("accept_request")]
-  fn accept_request(&self, domain_name: &ManagedBuffer) -> SingleValueMapper<ManagedAddress>;
-
-  #[view(get_domain_name)]
-  #[storage_mapper("domain_name")]
+  #[view(get_domain)]
+  #[storage_mapper("domain")]
   fn domain(&self, domain_name: &ManagedBuffer) -> SingleValueMapper<Domain<Self::Api>>;
 
   #[view(get_sub_domains)]
   #[storage_mapper("sub_domains")]
-  fn sub_domains(&self, domain_name: &ManagedBuffer) -> UnorderedSetMapper<SubDomain<Self::Api>>;
+  fn sub_domains(&self, domain_name: &ManagedBuffer) -> MapMapper<ManagedBuffer, SubDomain<Self::Api>>;
 
-  #[view(get_owner_domain_name)]
-  #[storage_mapper("owner_domain_name")]
-  fn owner_domain_name(&self, domain_name: &ManagedBuffer) -> SingleValueMapper<ManagedAddress>;
+  #[view(get_main_domain)]
+  #[storage_mapper("main_domain")]
+  fn main_domain(&self, addr: &ManagedAddress) -> SingleValueMapper<ManagedBuffer>;
 
   #[view(resolve)]
   #[storage_mapper("resolve_domain_name")]

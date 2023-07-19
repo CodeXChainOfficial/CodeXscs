@@ -1,7 +1,6 @@
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
-use crate::constant_module::MAX_TEXTRECORD;
 #[derive(
   ManagedVecItem, NestedEncode, NestedDecode, TopEncode, TopDecode, Clone, TypeAbi, Default,
 )]
@@ -69,15 +68,6 @@ pub struct Domain<M: ManagedTypeApi> {
 )]
 pub struct DomainNameAttributes {
   pub expires_at: u64,
-}
-
-
-#[derive(
-  ManagedVecItem, NestedEncode, NestedDecode, TopEncode, TopDecode, Clone, TypeAbi, Default,
-)]
-pub struct AcceptRequest<M: ManagedTypeApi> {
-  pub domain_name: Domain<M>,
-  pub until: u64,
 }
 
 #[derive(

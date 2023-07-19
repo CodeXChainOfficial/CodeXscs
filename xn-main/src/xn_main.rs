@@ -12,13 +12,12 @@ pub mod data_module;
 pub mod nft_module;
 pub mod price_oracle_module;
 pub mod storage_module;
-pub mod user_builtin;
 pub mod utils_module;
 
 use constant_module::{MIGRATION_PERIOD, NFT_AMOUNT};
 use data_module::{
     Domain, DomainNameAttributes, PeriodType, Profile, RentalFee, Reservation, SocialMedia,
-    SubDomain, TextRecord, Wallets,
+    TextRecord, Wallets
 };
 
 #[multiversx_sc::contract]
@@ -110,6 +109,7 @@ pub trait XnMain:
 
         self.get_egld_price_for_register(domain_name, period, unit, assign_to);
     }
+
     #[payable("*")]
     #[endpoint]
     fn update_domain_overview(
@@ -211,6 +211,7 @@ pub trait XnMain:
         require!(domain_record_exists, "Domain not exist");
 
         let mut domain = self.domain(&domain_name).get();
+        
         let mut records = ManagedVec::new();
         for record in text_record.iter() {
             records.push(record);
@@ -221,14 +222,18 @@ pub trait XnMain:
         self.refund();
     }
 
-    #[payable("ESDT")]
+    #[payable("*")]
     #[endpoint]
     fn update_primary_address(
         &self,
-        domain_name_or_sub_domain: ManagedBuffer,
-        assign_to: OptionalValue<ManagedAddress>,
+        domain_name: ManagedBuffer,
     ) {
-        self.internal_update_primary_address(&domain_name_or_sub_domain, assign_to);
+        let caller = self.blockchain().get_caller();
+        require!(self.is_owner(&domain_name), "Not allowed");
+
+        self.main_domain(&caller).set(domain_name);
+
+        self.refund();
     }
 
     #[payable("*")]
@@ -238,12 +243,7 @@ pub trait XnMain:
 
         let primary_domain = self.get_primary_domain(&sub_domain).unwrap();
 
-        let new_sub_domain = SubDomain {
-            name: sub_domain.clone(),
-            address: address.clone(),
-        };
-        let is_exist = self.sub_domains(&primary_domain).contains(&new_sub_domain);
-        require!(!is_exist, "Already registered");
+        require!(!self.sub_domains(&primary_domain).contains_key(&sub_domain.clone()), "Already registered");
 
         self.get_egld_price_for_register_subdomain(sub_domain, address);
 
@@ -319,20 +319,9 @@ pub trait XnMain:
     #[payable("*")]
     #[endpoint]
     fn transfer_domain(&self, domain_name: ManagedBuffer, new_owner: ManagedAddress) {
-        let (token_id, token_nonce, _amount) = self.call_value().egld_or_single_esdt().into_tuple();
-        let nft_token_id_mapper = self.domain_nft();
-        let domain_mapper = self.domain(&domain_name);
-        let caller = self.blockchain().get_caller();
+        require!(self.is_owner(&domain_name), "Not Allowed!");
 
-        require!(&caller != &new_owner, "can't transfer domain");
-        require!(!domain_mapper.is_empty(), "wrong domain name");
-        require!(domain_mapper.get().nft_nonce == token_nonce, "Not Allowed!");
-        require!(!nft_token_id_mapper.is_empty(), "Token not issued!");
-        require!(
-            &token_id == self.domain_nft().get_token_id_ref()
-                && token_nonce == domain_mapper.get().nft_nonce,
-            "wrong Nft"
-        );
+        let (token_id, token_nonce, _amount) = self.call_value().egld_or_single_esdt().into_tuple();
 
         self.send().direct_esdt(
             &new_owner,
@@ -340,29 +329,22 @@ pub trait XnMain:
             token_nonce,
             &BigUint::from(NFT_AMOUNT),
         );
+        self.sub_domains(&domain_name).clear();
     }
 
     #[payable("ESDT")]
     #[endpoint]
-    fn remove_sub_domain(&self, sub_domain_name: ManagedBuffer, address: ManagedAddress) {
+    fn remove_sub_domain(&self, sub_domain_name: ManagedBuffer) {
         require!(self.is_owner(&sub_domain_name), "Not Allowed!");
 
         let primary_domain = self.get_primary_domain(&sub_domain_name).unwrap();
-        let mut sub_domain_mapper = self.sub_domains(&primary_domain);
 
         require!(
-            sub_domain_mapper.contains(&SubDomain {
-                name: sub_domain_name.clone(),
-                address: address.clone()
-            }),
+            self.sub_domains(&primary_domain).contains_key(&sub_domain_name),
             "there is no sub domain to remove"
         );
 
-        sub_domain_mapper.swap_remove(&SubDomain {
-            name: sub_domain_name,
-            address,
-        });
-
+        self.sub_domains(&primary_domain).remove(&sub_domain_name);
         self.refund();
     }
 

@@ -3,7 +3,6 @@ multiversx_sc::derive_imports!();
 
 use crate::constant_module::{GRACE_PERIOD, MAX_LENGTH, MIN_LENGTH, YEAR_IN_SECONDS};
 use crate::constant_module::{NFT_AMOUNT, WEGLD_ID};
-use crate::user_builtin;
 
 #[allow(clippy::manual_range_contains)]
 fn check_name_char(ch: u8) -> bool {
@@ -239,18 +238,4 @@ pub trait UtilsModule: crate::storage_module::StorageModule {
             }
         }
     }
-
-    // fn internal_set_resolve_domain(&self, domain_name: &ManagedBuffer, address: &ManagedAddress) {
-    //     self.user_builtin_proxy(address.clone())
-    //         .set_user_name(domain_name.clone())
-    //         .async_call()
-    //         .with_callback(
-    //             self.callbacks()
-    //                 .set_user_name_callback(&domain_name, &address),
-    //         )
-    //         .call_and_exit();
-    // }
-
-    #[proxy]
-    fn user_builtin_proxy(&self, to: ManagedAddress) -> user_builtin::Proxy<Self::Api>;
 }

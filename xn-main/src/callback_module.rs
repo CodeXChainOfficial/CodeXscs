@@ -26,21 +26,6 @@ pub trait CallbackModule:
     }
 
     #[callback]
-    fn set_user_name_callback(
-        &self,
-        domain_name: &ManagedBuffer,
-        address: &ManagedAddress,
-        #[call_result] result: ManagedAsyncCallResult<()>,
-    ) {
-        match result {
-            ManagedAsyncCallResult::Ok(()) => {
-                self.resolve_domain_name(&domain_name).set(address);
-            }
-            ManagedAsyncCallResult::Err(_) => {}
-        }
-    }
-
-    #[callback]
     fn xexchange_callback(&self, #[call_result] result: ManagedAsyncCallResult<BigUint>) {
         match result {
             ManagedAsyncCallResult::Ok(amount_out) => {
@@ -183,11 +168,11 @@ pub trait CallbackModule:
                 let primary_domain = self.get_primary_domain(&sub_domain).unwrap();
 
                 let new_sub_domain = SubDomain {
-                    name: sub_domain,
+                    name: sub_domain.clone(),
                     address,
                 };
 
-                let _ = &mut self.sub_domains(&primary_domain).insert(new_sub_domain);
+                let _ = &mut self.sub_domains(&primary_domain).insert(sub_domain, new_sub_domain);
 
                 if price < egld_amount {
                     let excess = egld_amount - price;

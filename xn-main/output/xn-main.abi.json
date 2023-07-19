@@ -157,17 +157,12 @@
             "name": "update_primary_address",
             "mutability": "mutable",
             "payableInTokens": [
-                "ESDT"
+                "*"
             ],
             "inputs": [
                 {
-                    "name": "domain_name_or_sub_domain",
+                    "name": "domain_name",
                     "type": "bytes"
-                },
-                {
-                    "name": "assign_to",
-                    "type": "optional<Address>",
-                    "multi_arg": true
                 }
             ],
             "outputs": []
@@ -252,10 +247,6 @@
                 {
                     "name": "sub_domain_name",
                     "type": "bytes"
-                },
-                {
-                    "name": "address",
-                    "type": "Address"
                 }
             ],
             "outputs": []
@@ -343,22 +334,7 @@
             ]
         },
         {
-            "name": "get_accept_request",
-            "mutability": "readonly",
-            "inputs": [
-                {
-                    "name": "domain_name",
-                    "type": "bytes"
-                }
-            ],
-            "outputs": [
-                {
-                    "type": "Address"
-                }
-            ]
-        },
-        {
-            "name": "get_domain_name",
+            "name": "get_domain",
             "mutability": "readonly",
             "inputs": [
                 {
@@ -383,23 +359,23 @@
             ],
             "outputs": [
                 {
-                    "type": "variadic<SubDomain>",
+                    "type": "variadic<multi<bytes,SubDomain>>",
                     "multi_result": true
                 }
             ]
         },
         {
-            "name": "get_owner_domain_name",
+            "name": "get_main_domain",
             "mutability": "readonly",
             "inputs": [
                 {
-                    "name": "domain_name",
-                    "type": "bytes"
+                    "name": "addr",
+                    "type": "Address"
                 }
             ],
             "outputs": [
                 {
-                    "type": "Address"
+                    "type": "bytes"
                 }
             ]
         },
