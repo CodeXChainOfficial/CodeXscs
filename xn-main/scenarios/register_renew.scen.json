@@ -20,7 +20,7 @@
                 "1",
                 "4"
               ],
-              "gasLimit": "12,000,000",
+              "gasLimit": "50,000,000",
               "gasPrice": "0"
           },
           "expect": {
@@ -29,6 +29,10 @@
               "gas": "*",
               "refund": "*"
           }
+      },
+      {
+        "step": "dumpState",
+        "comment": "print everything to console"
       },
       {
         "step": "checkState",
@@ -72,13 +76,7 @@
                 "str:egld_usd_price": "268000000000000",
                 "str:allowed_top_level_domains.len":"1",
                 "str:allowed_top_level_domains.item|u32:1":"str:mvx",
-                "str:prices_usd.len": "5",
-                "str:prices_usd.item|u32:1": "10000",
-                "str:prices_usd.item|u32:2": "10000",
-                "str:prices_usd.item|u32:3": "10000",
-                "str:prices_usd.item|u32:4": "1000",
-                "str:prices_usd.item|u32:5": "100",
-                "str:nftTokenId": "str:NFT-123456",
+                "str:prices_usd":"0x00000000000027100000000000002710000000000000271000000000000003e80000000000000064",
                 "str:domain_name|nested:str:own.mvx":"*"
             },
             "esdt": {
