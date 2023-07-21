@@ -43,7 +43,7 @@ pub trait CallbackModule:
 
     #[payable("*")]
     #[callback]
-    fn register_or_renew_callback(
+    fn register_callback(
         &self,
         caller: ManagedAddress,
         payments: ManagedVec<Self::Api, EsdtTokenPayment<Self::Api>>,
@@ -114,6 +114,75 @@ pub trait CallbackModule:
 
                     self.domain(&domain_name)
                         .set(new_domain_record.clone());
+                }
+
+                if price < egld_amount {
+                    let excess = egld_amount - price;
+                    self.send().direct(
+                        &caller,
+                        &EgldOrEsdtTokenIdentifier::esdt(TokenIdentifier::from(WEGLD_ID)),
+                        0,
+                        &excess,
+                    );
+                }
+                self.refund_with_payments(caller, payments);
+            }
+            ManagedAsyncCallResult::Err(_) => {
+                
+            }
+        }
+    }
+
+    #[payable("*")]
+    #[callback]
+    fn extend_callback(
+        &self,
+        caller: ManagedAddress,
+        payments: ManagedVec<Self::Api, EsdtTokenPayment<Self::Api>>,
+        domain_name: ManagedBuffer,
+        period: u8,
+        unit: PeriodType,
+        #[call_result] result: ManagedAsyncCallResult<BigUint>,
+    ) {
+        match result {
+            ManagedAsyncCallResult::Ok(amount_out) => {
+                self.egld_usd_price().set(amount_out.to_u64().unwrap());
+
+                let mut egld_amount = BigUint::zero();
+                for payment in payments.iter() {
+                    if payment.clone().token_identifier.into_managed_buffer()
+                        == ManagedBuffer::from(WEGLD_ID)
+                    {
+                        egld_amount = payment.amount;
+                        break;
+                    }
+                }
+
+                let secs = [
+                    YEAR_IN_SECONDS,
+                    MONTH_IN_SECONDS,
+                    DAY_IN_SECONDS,
+                    HOUR_IN_SECONDS,
+                    MIN_IN_SECONDS,
+                ];
+                let period_secs: u64 = u64::from(period) * secs[unit as usize];
+
+                let price = self.rent_price(&domain_name, &period_secs);
+
+                if price > egld_amount {
+                    self.refund_all(caller, payments);
+                    sc_panic!("Insufficient EGLD Funds {} {}", price.to_u64().unwrap(), egld_amount.to_u64().unwrap());
+                }
+
+                let since = self.blockchain().get_block_timestamp();
+
+                if !self.domain(&domain_name).is_empty() {
+                    let mut domain_record = self.domain(&domain_name).get();
+                    domain_record.expires_at = since + period_secs;
+                    self.domain(&domain_name).set(domain_record.clone());
+                } else {
+                    self.refund_all(caller, payments);
+                    sc_panic!("Domain not exist");
                 }
 
                 if price < egld_amount {

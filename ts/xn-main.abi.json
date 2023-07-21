@@ -2,10 +2,10 @@
     "buildInfo": {
         "rustc": {
             "version": "1.73.0-nightly",
-            "commitHash": "0e8e857b11f60a785aea24a84f280f6dad7a4d42",
-            "commitDate": "2023-07-16",
+            "commitHash": "903e279f468590fa3425f8aff7f3d61a5a873dbb",
+            "commitDate": "2023-07-18",
             "channel": "Nightly",
-            "short": "rustc 1.73.0-nightly (0e8e857b1 2023-07-16)"
+            "short": "rustc 1.73.0-nightly (903e279f4 2023-07-18)"
         },
         "contractCrate": {
             "name": "xn-main",
@@ -51,7 +51,7 @@
             "outputs": []
         },
         {
-            "name": "register_or_renew",
+            "name": "register_domain",
             "mutability": "mutable",
             "payableInTokens": [
                 "*"
@@ -73,6 +73,28 @@
                     "name": "assign_to",
                     "type": "optional<Address>",
                     "multi_arg": true
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "extend_domain",
+            "mutability": "mutable",
+            "payableInTokens": [
+                "*"
+            ],
+            "inputs": [
+                {
+                    "name": "domain_name",
+                    "type": "bytes"
+                },
+                {
+                    "name": "period",
+                    "type": "u8"
+                },
+                {
+                    "name": "unit",
+                    "type": "PeriodType"
                 }
             ],
             "outputs": []
@@ -241,7 +263,7 @@
             "name": "remove_sub_domain",
             "mutability": "mutable",
             "payableInTokens": [
-                "ESDT"
+                "*"
             ],
             "inputs": [
                 {

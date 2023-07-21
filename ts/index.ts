@@ -11,9 +11,9 @@ const networkProvider = new ApiNetworkProvider("https://devnet-api.multiversx.co
 const address = "erd1qqqqqqqqqqqqqpgqm2y7angkuyew964jah77s20es9h3u55evycszs3hgn";
 const abi_path = "./xn-main.abi.json";
 const WEGLD = "WEGLD-d7c6bb";
-const domain1 = "marko1.mvx";
+const domain1 = "marko2.mvx";
 const domain2 = "marko2.mvx";
-const subdomain1 = "www.marko1.mvx";
+const subdomain1 = "www.marko2.mvx";
 
 let signer: UserSigner;
 let other: UserSigner;
@@ -147,7 +147,7 @@ const setEgldPrice = async () => {
 }
 
 const register = async () => {
-  let transaction = contract.methodsExplicit.register_or_renew([
+  let transaction = contract.methodsExplicit.register_domain([
     new StringValue(domain1),
     new U64Value(1),
     new U8Value(4)
@@ -174,7 +174,38 @@ const register = async () => {
 
   console.log(JSON.stringify(transactionOnNetwork))
 }
+const extend_domain = async () => {
+  const domain = await getDomain(domain1);
+  const domain_nft_id = await getDomainNftId();
 
+  let transaction = contract.methodsExplicit.extend_domain([
+    new StringValue(domain1),
+    new U64Value(1),
+    new U8Value(4)
+  ])
+    .withSender(signer.getAddress())
+    .withMultiESDTNFTTransfer([
+      TokenTransfer.fungibleFromAmount(WEGLD, 0.000_000_000_1, 18),
+      TokenTransfer.nonFungible(domain_nft_id, domain.nft_nonce)
+    ])
+    .withGasLimit(50_000_000)
+    .withChainID("D")
+    .buildTransaction();
+
+  const account = new Account(signer.getAddress());
+  const accountOnNetwork = await networkProvider.getAccount(signer.getAddress());
+  account.update(accountOnNetwork);
+  transaction.setNonce(account.getNonceThenIncrement());
+
+  const serializedTransaction = transaction.serializeForSigning();
+  const transactionSignature = await signer.sign(serializedTransaction);
+  transaction.applySignature(transactionSignature);
+
+  await networkProvider.sendTransaction(transaction);
+  let transactionOnNetwork = await new TransactionWatcher(networkProvider).awaitCompleted(transaction);
+
+  console.log(JSON.stringify(transactionOnNetwork))
+}
 const setReservation = async () => {
   const reservations = await getReservations();
   let transaction = contract.call({
@@ -199,7 +230,6 @@ const setReservation = async () => {
 
   console.log(JSON.stringify(transactionOnNetwork))
 }
-
 
 const setDomainProfileOverview = async () => {
   const domain = await getDomain(domain1);
@@ -376,6 +406,40 @@ const registerSubdomain = async () => {
   console.log(JSON.stringify(transactionOnNetwork))
 }
 
+
+const removeSubdomain = async () => {
+  const domain = await getDomain(domain1);
+  const domain_nft_id = await getDomainNftId();
+
+  console.log(new TokenIdentifierValue(WEGLD).toString());
+
+  let transaction = contract.methodsExplicit.remove_sub_domain([
+    new StringValue(subdomain1),
+  ])
+    .withSender(signer.getAddress())
+    .withMultiESDTNFTTransfer([
+      TokenTransfer.fungibleFromAmount(WEGLD, 0.000_000_000_1, 18),
+      TokenTransfer.nonFungible(domain_nft_id, domain.nft_nonce)
+    ])
+    .withGasLimit(50_000_000)
+    .withChainID("D")
+    .buildTransaction();
+
+  const account = new Account(signer.getAddress());
+  const accountOnNetwork = await networkProvider.getAccount(signer.getAddress());
+  account.update(accountOnNetwork);
+  transaction.setNonce(account.getNonceThenIncrement());
+
+  const serializedTransaction = transaction.serializeForSigning();
+  const transactionSignature = await signer.sign(serializedTransaction);
+  transaction.applySignature(transactionSignature);
+
+  await networkProvider.sendTransaction(transaction);
+  let transactionOnNetwork = await new TransactionWatcher(networkProvider).awaitCompleted(transaction);
+
+  console.log(JSON.stringify(transactionOnNetwork))
+}
+
 const transferDomain = async () => {
   const domain = await getDomain(domain1);
   const domain_nft_id = await getDomainNftId();
@@ -436,19 +500,24 @@ const updatePrimaryDomain = async () => {
 
 const main = async () => {
   await setEnv();
-  // await getDomain(domain1);
+  await getDomain(domain1);
   await getEgldPrice();
   await getDomainNftId();
   // await getSubDomains(domain1);
   
   // await setEgldPrice();
-  // await register();
+
+  await register();
+  await extend_domain();
+
   // await setReservation();
   // await setDomainProfileOverview();
   // await setDomainProfileSocial();
   // await setDomainProfileWallets();
   // await setDomainProfileTextRecords();
-  // await registerSubdomain();
+  await registerSubdomain();
+  // await removeSubdomain();
+
   // await transferDomain();
   // await updatePrimaryDomain();
 }

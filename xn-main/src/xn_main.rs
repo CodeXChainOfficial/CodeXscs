@@ -82,7 +82,7 @@ pub trait XnMain:
 
     #[payable("*")]
     #[endpoint]
-    fn register_or_renew(
+    fn register_domain(
         &self,
         domain_name: ManagedBuffer,
         period: u8,
@@ -108,6 +108,19 @@ pub trait XnMain:
         );
 
         self.get_egld_price_for_register(domain_name, period, unit, assign_to);
+    }
+
+    #[payable("*")]
+    #[endpoint]
+    fn extend_domain(
+        &self,
+        domain_name: ManagedBuffer,
+        period: u8,
+        unit: PeriodType,
+    ) {
+        require!(self.is_owner(&domain_name), "Not allowed");
+
+        self.get_egld_price_for_extend(domain_name, period, unit);
     }
 
     #[payable("*")]
@@ -332,7 +345,7 @@ pub trait XnMain:
         self.sub_domains(&domain_name).clear();
     }
 
-    #[payable("ESDT")]
+    #[payable("*")]
     #[endpoint]
     fn remove_sub_domain(&self, sub_domain_name: ManagedBuffer) {
         require!(self.is_owner(&sub_domain_name), "Not Allowed!");

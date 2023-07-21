@@ -32,13 +32,35 @@ pub trait AsyncCallModule:
             self.oracle_address().get(),
             TokenIdentifier::from_esdt_bytes(WEGLD_ID),
             BigUint::from(1_000_000_000_000_000_000u64),
-            self.callbacks().register_or_renew_callback(
+            self.callbacks().register_callback(
                 caller,
                 payments,
                 domain_name,
                 period,
                 unit,
                 _assign_to,
+            ),
+        )
+    }
+    fn get_egld_price_for_extend(
+        &self,
+        domain_name: ManagedBuffer,
+        period: u8,
+        unit: PeriodType,
+    ) {
+        let payments = self.call_value().all_esdt_transfers();
+        let caller = self.blockchain().get_caller();
+
+        self.xexchange_pair_get_equivalent(
+            self.oracle_address().get(),
+            TokenIdentifier::from_esdt_bytes(WEGLD_ID),
+            BigUint::from(1_000_000_000_000_000_000u64),
+            self.callbacks().extend_callback(
+                caller,
+                payments,
+                domain_name,
+                period,
+                unit
             ),
         )
     }
