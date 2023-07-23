@@ -216,7 +216,7 @@ pub trait XnMain:
     fn update_domain_textrecord(
         &self,
         domain_name: ManagedBuffer,
-        text_record: MultiValueManagedVec<TextRecord<Self::Api>>,
+        text_record: MultiValueManagedVec<ManagedBuffer>,
     ) {
         require!(self.is_owner(&domain_name), "Not allowed",);
 
@@ -227,7 +227,30 @@ pub trait XnMain:
         
         let mut records = ManagedVec::new();
         for record in text_record.iter() {
-            records.push(record);
+            let value = record.deref();
+            
+            let mut parts: ManagedVec<Self::Api, ManagedBuffer> = ManagedVec::new();
+            let mut start: usize = 0;
+            let mut value_bytes = [0u8; 1024];
+            let value_len = value.len();
+            let value_slice = &mut value_bytes[..value_len];
+    
+            value.load_slice(0, value_slice)
+                .expect("error loading textrecord bytes");
+    
+            for (i, &byte) in value_slice.iter().enumerate() {
+                if byte == b'@' {
+                    parts.push(ManagedBuffer::from(&value_slice[start..i]));
+                    start = i + 1;
+                }
+            }
+            parts.push(ManagedBuffer::from(&value_slice[start..]));
+            require!(parts.len() == 2, "invalid textrecord value");
+            
+            records.push(TextRecord{
+                name_value: parts.get(0).deref().clone(),
+                link: parts.get(1).deref().clone()
+            });
         }
         domain.text_record = Some(records);
         self.domain(&domain_name).set(&domain);

@@ -169,7 +169,7 @@
                 },
                 {
                     "name": "text_record",
-                    "type": "variadic<TextRecord>",
+                    "type": "variadic<bytes>",
                     "multi_arg": true
                 }
             ],

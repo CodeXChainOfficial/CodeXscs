@@ -344,12 +344,15 @@ const setDomainProfileTextRecords = async () => {
   const domain = await getDomain(domain1);
   const domain_nft_id = await getDomainNftId();
 
-  console.log(textRecord1.valueOf());
-
   let variadicType = new VariadicType(textRecordType);
   let transaction = contract.methodsExplicit.update_domain_textrecord([
     new StringValue(domain1),
-    new VariadicValue(variadicType, [textRecord1, textRecord2]),
+    new VariadicValue(variadicType,
+      [
+        new StringValue("name_value1@https://discord.com/marko1"),
+        new StringValue("name_value2@https://discord.com/marko2")
+      ]
+    ),
   ])
     .withSender(signer.getAddress())
     .withSingleESDTNFTTransfer(TokenTransfer.nonFungible(domain_nft_id, domain.nft_nonce))
@@ -504,18 +507,18 @@ const main = async () => {
   await getEgldPrice();
   await getDomainNftId();
   // await getSubDomains(domain1);
-  
+
   // await setEgldPrice();
 
-  await register();
-  await extend_domain();
+  // await register();
+  // await extend_domain();
 
   // await setReservation();
   // await setDomainProfileOverview();
   // await setDomainProfileSocial();
   // await setDomainProfileWallets();
   // await setDomainProfileTextRecords();
-  await registerSubdomain();
+  // await registerSubdomain();
   // await removeSubdomain();
 
   // await transferDomain();
